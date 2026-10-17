@@ -7,6 +7,7 @@ import com.dmi.domain.AnalysisRequest;
 import com.dmi.domain.DependencyCoordinate;
 import com.dmi.domain.Finding;
 import com.dmi.fixtures.FixtureRegistry;
+import com.dmi.validation.MigrationReviewEnricher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -30,18 +31,21 @@ public class AnalysisService {
     private final SourceEvidenceScanner sourceEvidenceScanner;
     private final AdvisoryCatalogue advisoryCatalogue;
     private final FindingClassifier findingClassifier;
+    private final MigrationReviewEnricher migrationReviewEnricher;
 
     public AnalysisService(
             FixtureRegistry fixtureRegistry,
             MavenManifestReader mavenManifestReader,
             SourceEvidenceScanner sourceEvidenceScanner,
             AdvisoryCatalogue advisoryCatalogue,
-            FindingClassifier findingClassifier) {
+            FindingClassifier findingClassifier,
+            MigrationReviewEnricher migrationReviewEnricher) {
         this.fixtureRegistry = fixtureRegistry;
         this.mavenManifestReader = mavenManifestReader;
         this.sourceEvidenceScanner = sourceEvidenceScanner;
         this.advisoryCatalogue = advisoryCatalogue;
         this.findingClassifier = findingClassifier;
+        this.migrationReviewEnricher = migrationReviewEnricher;
     }
 
     public AnalysisReport analyze(AnalysisRequest request) {
@@ -90,7 +94,8 @@ public class AnalysisService {
 
         List<PatternDescriptor> patternDescriptors = buildPatternDescriptors();
         ScanResult scanResult = sourceEvidenceScanner.scan(fixtureRoot, patternDescriptors);
-        List<Finding> findings = findingClassifier.classify(advisoryCatalogue.entries(), scanResult);
+        List<Finding> findings = migrationReviewEnricher.enrich(
+                findingClassifier.classify(advisoryCatalogue.entries(), scanResult));
 
         List<String> limitations = new ArrayList<>(ReportComposer.defaultLimitations());
         limitations.addAll(digestResult.limitations());

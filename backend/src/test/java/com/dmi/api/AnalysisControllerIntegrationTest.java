@@ -43,6 +43,9 @@ class AnalysisControllerIntegrationTest {
                 .andExpect(jsonPath("$.findings[*].id", hasItem("jakarta-annotation-postconstruct")))
                 .andExpect(jsonPath("$.findings[*].id", hasItem("pathmatch-strategy")))
                 .andExpect(jsonPath("$.findings[?(@.id=='jakarta-servlet-api')].confidence", hasItem("CONFIRMED_STATIC")))
+                .andExpect(jsonPath("$.findings[?(@.id=='jakarta-servlet-api')].migrationReview.verdict", hasItem("ACTION_REQUIRED")))
+                .andExpect(jsonPath("$.findings[?(@.id=='pathmatch-strategy')].migrationReview.verdict", hasItem("REVIEW_RECOMMENDED")))
+                .andExpect(jsonPath("$.findings[?(@.id=='pathmatch-strategy')].migrationReview.openRewriteComparison", hasItem("NOT_PRESENT_IN_PATCH")))
                 .andExpect(jsonPath("$.limitations.length()").value(org.hamcrest.Matchers.greaterThan(0)));
     }
 

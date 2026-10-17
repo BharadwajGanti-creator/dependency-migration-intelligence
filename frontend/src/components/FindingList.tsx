@@ -1,9 +1,17 @@
-import type { Finding } from '../api/types'
+import type { Finding, MigrationVerdict } from '../api/types'
 
 const confidenceLabel: Record<Finding['confidence'], string> = {
   CONFIRMED_STATIC: 'Confirmed (static)',
   POSSIBLE: 'Possible',
   NOT_ASSESSED: 'Not assessed',
+}
+
+const verdictLabel: Record<MigrationVerdict, string> = {
+  ACTION_REQUIRED: 'Reviewed: action required',
+  REVIEW_RECOMMENDED: 'Reviewed: manual review',
+  INFORMATIONAL: 'Reviewed: informational',
+  FALSE_POSITIVE: 'Reviewed: false positive',
+  UNVERIFIED: 'Reviewed: unverified',
 }
 
 export function FindingList({ findings }: { findings: Finding[] }) {
@@ -17,9 +25,66 @@ export function FindingList({ findings }: { findings: Finding[] }) {
         <li key={f.id} className={`finding-card confidence-${f.confidence}`}>
           <header>
             <span className="badge">{confidenceLabel[f.confidence]}</span>
+            {f.migrationReview && (
+              <span className={`badge verdict verdict-${f.migrationReview.verdict}`}>
+                {verdictLabel[f.migrationReview.verdict]}
+              </span>
+            )}
             <h3>{f.id}</h3>
           </header>
           <p>{f.summary}</p>
+          {f.migrationReview && (
+            <div className="migration-review">
+              <h4>Reviewed migration consequence</h4>
+              <p className="review-note">
+                Static detection ({confidenceLabel[f.confidence]}) is separate from the reviewed verdict
+                below. Neither implies runtime verification or merge safety.
+              </p>
+              <p>{f.migrationReview.evidenceProves}</p>
+              <dl className="review-meta">
+                <div>
+                  <dt>OpenRewrite baseline</dt>
+                  <dd>{f.migrationReview.openRewriteComparison.replaceAll('_', ' ').toLowerCase()}</dd>
+                </div>
+                <div>
+                  <dt>Tested scenario</dt>
+                  <dd>{f.migrationReview.testedScenario}</dd>
+                </div>
+                <div>
+                  <dt>Next human check</dt>
+                  <dd>{f.migrationReview.nextHumanCheck}</dd>
+                </div>
+                {f.migrationReview.openRewriteRecipe && (
+                  <div>
+                    <dt>Recipe (offline baseline)</dt>
+                    <dd>
+                      <code>{f.migrationReview.openRewriteRecipe}</code> (plugin{' '}
+                      {f.migrationReview.openRewritePluginVersion}, rewrite-spring{' '}
+                      {f.migrationReview.openRewriteRecipeArtifactVersion})
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {f.migrationReview.evidence.length > 0 && (
+                <div>
+                  <h5>Review evidence</h5>
+                  <ul>
+                    {f.migrationReview.evidence.map((d) => (
+                      <li key={d.url}>
+                        <a href={d.url} target="_blank" rel="noreferrer">
+                          {d.title} — {d.section}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {f.migrationReview.verdict === 'UNVERIFIED' && (
+                <p className="unverified-banner">No reviewed adjudication — do not treat as safe or complete.</p>
+              )}
+              <p className="rationale muted">{f.migrationReview.reviewerNotes}</p>
+            </div>
+          )}
           {f.sourceLocations.length > 0 && (
             <div>
               <h4>Source evidence</h4>

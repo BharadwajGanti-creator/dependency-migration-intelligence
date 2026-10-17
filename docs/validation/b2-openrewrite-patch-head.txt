@@ -1,0 +1,30 @@
+diff --git a/pom.xml b/pom.xml
+index 4bf462f..4ed9b66 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -7,7 +7,7 @@ org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_2
+     <parent>
+         <groupId>org.springframework.boot</groupId>
+         <artifactId>spring-boot-starter-parent</artifactId>
+-        <version>2.7.18</version>
++        <version>3.2.12</version>
+         <relativePath/>
+     </parent>
+ 
+@@ -18,7 +18,7 @@
+     <description>Synthetic fixture for DMI Spring Boot 2→3 analysis</description>
+ 
+     <properties>
+-        <java.version>11</java.version>
++        <java.version>17</java.version>
+     </properties>
+ 
+     <dependencies>
+@@ -27,9 +27,8 @@
+             <artifactId>spring-boot-starter-web</artifactId>
+         </dependency>
+         <dependency>
+-            <groupId>javax.servlet</groupId>
+-            <artifactId>javax.servlet-api</artifactId>
+-            <version>4.0.1</version>
++            <groupId>jakarta.servlet</groupId>

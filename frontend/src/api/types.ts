@@ -1,5 +1,37 @@
 export type Confidence = 'CONFIRMED_STATIC' | 'POSSIBLE' | 'NOT_ASSESSED'
 
+export type MigrationVerdict =
+  | 'ACTION_REQUIRED'
+  | 'REVIEW_RECOMMENDED'
+  | 'INFORMATIONAL'
+  | 'FALSE_POSITIVE'
+  | 'UNVERIFIED'
+
+export type OpenRewriteComparisonStatus =
+  | 'PATCHED_IN_BASELINE'
+  | 'NOT_PRESENT_IN_PATCH'
+  | 'NOT_TESTED'
+
+export interface MigrationEvidenceRef {
+  url: string
+  title: string
+  section: string
+}
+
+export interface MigrationReview {
+  verdict: MigrationVerdict
+  openRewriteComparison: OpenRewriteComparisonStatus
+  evidenceProves: string
+  evidence: MigrationEvidenceRef[]
+  testedScenario: string
+  openRewriteRecipe: string
+  openRewritePluginVersion: string
+  openRewriteRecipeArtifactVersion: string
+  reviewerNotes: string
+  lastReviewedUtc: string
+  nextHumanCheck: string
+}
+
 export interface SourceLocation {
   path: string
   line: number
@@ -20,6 +52,7 @@ export interface Finding {
   documentation: DocumentationRef[]
   rationale: string
   proposedChecks: string[]
+  migrationReview?: MigrationReview
 }
 
 export interface AnalysisReport {

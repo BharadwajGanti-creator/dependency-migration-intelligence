@@ -1,14 +1,15 @@
 # B1 verification report — F02/F03 evidence integrity
 
-**Branch:** `feat/dmi-evidence-integrity`  
+**Branch:** `feat/dmi-evidence-integrity` (merged to `main` via PR #1 @ `82a2737`)  
 **Baseline main at branch point:** `c48f6e8`  
-**Spec:** `docs/next-batch/02_DMI_Implementation_Batch_Spec.md`
+**Spec:** `docs/next-batch/02_DMI_Implementation_Batch_Spec.md`  
+**Follow-on:** B2 adjudication work on `cursor/dmi-b2-value-validation-f989`; see `docs/validation/b2-results.md`.
 
 ## Commands executed (latest)
 
 | Command | Result |
 |---------|--------|
-| `cd backend && ./mvnw verify` | **PASS** — **28** tests, 0 failures |
+| `cd backend && ./mvnw verify` | **PASS** — **33** tests at B1 merge, 0 failures |
 | `cd frontend && npm run build` | **PASS** |
 
 ## Principal review fixes (same branch)
@@ -30,6 +31,6 @@
 
 ## Residual risks
 
-- `pathmatch-strategy` / OpenRewrite differentiation still not fully validated.
+- `pathmatch-strategy` / OpenRewrite differentiation addressed in **B2** (`docs/validation/b2-results.md`); runtime MVC probe remains UNVERIFIED.
 - Digest/scanner depth policy assumes fixture layout ≤ `MAX_DEPTH`; deeper layout fails digest (by design).
 - No runtime Maven effective-POM resolution.
