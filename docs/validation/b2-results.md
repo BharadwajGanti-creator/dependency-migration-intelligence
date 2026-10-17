@@ -47,7 +47,7 @@ Documented **what the executed dryRun patched** (parent, java.version, javax→j
 ## V05–V06 — API/UI (VERIFIED)
 
 - Optional `finding.migrationReview` documented in `docs/validation/b2-api-contract.md`.
-- UI (`FindingList`) shows separate badges for static confidence vs reviewed verdict, OpenRewrite comparison, citations, UNVERIFIED banner.
+- UI (`FindingList`) shows separate badges for static confidence vs reviewed verdict, OpenRewrite comparison, citations, UNVERIFIED banner. **INFORMATIONAL** / **FALSE_POSITIVE** labels styled in component; no fixture finding uses those verdicts (manual smoke: build-only; map verified in `FindingList.tsx` VERDICT_LABELS).
 
 ## V07–V08 — Labelled cases & tests
 
