@@ -58,6 +58,7 @@ cd frontend && npm ci && npm run build
 - `frontend/` — React portfolio + analyzer UI
 - `fixtures/spring-migration-case/` — allowlisted analysis target
 - `docs/` — ADRs, baseline, implementation decisions
+- `docs/next-batch/` — B1 F02/F03 batch specs (architecture delta, implementation spec, agent runbook)
 
 ## Invariants
 
