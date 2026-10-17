@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "batchId": "B4",
+  "migrationPair": {
+    "group": "org.springframework.boot",
+    "artifact": "spring-boot-starter-parent",
+    "fromVersion": "2.7.18",
+    "toVersion": "3.2.12"
+  },
+  "publicApiFixtureAllowlist": ["spring-migration-case"],
+  "corpusExecutionSeam": "test-only: scenarios materialized under a temporary fixtures root as spring-migration-case; FixtureRegistry KNOWN_FIXTURES unchanged",
+  "scenarios": [
+    {
+      "id": "b4-scenario-jakarta-servlet-tp",
+      "label": "true_positive",
+      "origin": "Original minimal DMI corpus scenario (Apache-2.0, same license as repository)",
+      "scenarioDir": "scenarios/b4-scenario-jakarta-servlet-tp",
+      "contentSha256": "28fb3d6feaf68b11115fc8d75bf084414b3a7e5c49f2182032c7a2f48a3b0a48",
+      "expectedOutcomes": [
+        {
+          "findingId": "jakarta-servlet-api",
+          "expectedConfidence": "CONFIRMED_STATIC",
+          "expectedVerdict": "ACTION_REQUIRED",
+          "taxonomy": "true_positive"
+        },
+        {
+          "findingId": "jakarta-annotation-postconstruct",
+          "expectedConfidence": "NOT_ASSESSED",
+          "expectedVerdict": null,
+          "taxonomy": "true_negative_absence"
+        },
+        {
+          "findingId": "pathmatch-strategy",
+          "expectedConfidence": "NOT_ASSESSED",
+          "expectedVerdict": null,
+          "taxonomy": "true_negative_absence"
+        }
+      ],
+      "openRewriteExpectation": "PATCHED_IN_BASELINE",
+      "limitations": ["Single filter class; no runtime servlet container test executed."]
+    },
+    {
+      "id": "b4-scenario-no-static-signals",
+      "label": "absent_pattern_negative",
+      "origin": "Original minimal DMI corpus scenario (Apache-2.0)",
+      "scenarioDir": "scenarios/b4-scenario-no-static-signals",
+      "contentSha256": "ad2d930373c160a23d9ecd0c7a5380458145700743a0ef05e80ecffb0b8d5ddb",
+      "expectedOutcomes": [
+        {
+          "findingId": "jakarta-servlet-api",
+          "expectedConfidence": "NOT_ASSESSED",
+          "mustNotBeConfidence": "CONFIRMED_STATIC",
+          "taxonomy": "true_negative"
+        },
+        {
+          "findingId": "jakarta-annotation-postconstruct",
+          "expectedConfidence": "NOT_ASSESSED",
+          "mustNotBeConfidence": "CONFIRMED_STATIC",
+          "taxonomy": "true_negative"
+        },
+        {
+          "findingId": "pathmatch-strategy",
+          "expectedConfidence": "NOT_ASSESSED",
+          "mustNotBeConfidence": "CONFIRMED_STATIC",
+          "taxonomy": "true_negative"
+        },
+        {
+          "findingId": "parent-version-bump",
+          "expectedConfidence": "POSSIBLE",
+          "expectedVerdict": "ACTION_REQUIRED",
+          "taxonomy": "informational_doc_only"
+        }
+      ],
+      "openRewriteExpectation": "NOT_RUN",
+      "limitations": ["Uses jakarta imports in one stub class; does not prove full Boot 3 readiness."]
+    },
+    {
+      "id": "b4-scenario-pathmatch-review",
+      "label": "review_only_informational",
+      "origin": "Original minimal DMI corpus scenario (Apache-2.0)",
+      "scenarioDir": "scenarios/b4-scenario-pathmatch-review",
+      "contentSha256": "d73de84db1769ec474fd8dfe270483d4d177acd7616d5ee39dee9bff3246058a",
+      "expectedOutcomes": [
+        {
+          "findingId": "pathmatch-strategy",
+          "expectedConfidence": "CONFIRMED_STATIC",
+          "expectedVerdict": "REVIEW_RECOMMENDED",
+          "mustNotBeVerdict": "ACTION_REQUIRED",
+          "taxonomy": "informational_review"
+        },
+        {
+          "findingId": "jakarta-servlet-api",
+          "expectedConfidence": "NOT_ASSESSED",
+          "mustNotBeConfidence": "CONFIRMED_STATIC",
+          "taxonomy": "true_negative_absence"
+        }
+      ],
+      "openRewriteExpectation": "NOT_PRESENT_IN_PATCH",
+      "limitations": ["Property-only signal; MVC route behavior not exercised."]
+    },
+    {
+      "id": "b4-scenario-comment-abstention",
+      "label": "abstention_comment_only",
+      "origin": "Original minimal DMI corpus scenario (Apache-2.0)",
+      "scenarioDir": "scenarios/b4-scenario-comment-abstention",
+      "contentSha256": "d6685148a9a42da395a6622a831c7ae22d10b44984c074313f79486f38e7ba2a",
+      "expectedOutcomes": [
+        {
+          "findingId": "jakarta-servlet-api",
+          "expectedConfidence": "POSSIBLE",
+          "mustNotBeConfidence": "CONFIRMED_STATIC",
+          "taxonomy": "abstention"
+        }
+      ],
+      "openRewriteExpectation": "NOT_RUN",
+      "limitations": ["Comment-only match must not escalate to CONFIRMED_STATIC."]
+    }
+  ],
+  "referenceScenario": {
+    "id": "spring-migration-case",
+    "location": "fixtures/spring-migration-case",
+    "note": "Public allowlisted fixture; covered by GoldenExpectedFindingsTest and AnalysisControllerIntegrationTest, not duplicated in corpus tree."
+  }
+}
