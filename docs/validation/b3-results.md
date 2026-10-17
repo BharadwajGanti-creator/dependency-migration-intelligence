@@ -9,7 +9,7 @@
 
 | Command | Result |
 |---------|--------|
-| `cd backend && ./mvnw verify` | PASS — **54** tests, 0 failures |
+| `cd backend && ./mvnw verify` | PASS — **56** tests, 0 failures |
 | `cd frontend && npm ci && npm run build` | PASS |
 
 With default properties, `POST /api/v1/analyses/explanations` returns `DISABLED` explanations while preserving full sync-equivalent `report`. Integration test asserts embedded `report.findings` equals sync response findings JSON.
@@ -22,6 +22,8 @@ With default properties, `POST /api/v1/analyses/explanations` returns `DISABLED`
 | 2 | `REJECTED` must not leak model output | Deterministic envelope only; `experimentStatus=REJECTED_BY_VERIFIER` | `#finding2_*`, `ExplanationInvalidOutputIntegrationTest` |
 | 3 | Per-request executor | **Deferred** — `real-inference-enabled=false` default; sync harness path | ADR-003; enabled only when real inference explicitly allowed |
 | 4 | Negative/security coverage | Security + API negative tests retained | `ExplanationVerifierSecurityTest`, controller integration tests |
+
+**Final verifier gaps (same PR):** URL suffix spoof after allowed prefix; URLs in `limitations`/`nextChecks` bypass — fixed @ correction commit with regression tests (`rejectsUrlSuffixSpoofAfterAllowedPrefix`, `rejectsUnsupportedUrlInLimitationsList`).
 
 ## A2 — Sanitized evidence packs (VERIFIED)
 

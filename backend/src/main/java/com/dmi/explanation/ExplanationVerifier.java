@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -52,6 +51,9 @@ public class ExplanationVerifier {
         Set<String> allowedIds = Set.copyOf(pack.items().stream().map(EvidenceItem::id).toList());
         Set<String> allowedUrls = allowedUrlTokens(pack);
 
+        validateUrlList(explanation.nextChecks(), allowedUrls, "nextChecks", violations);
+        validateUrlList(explanation.limitations(), allowedUrls, "limitations", violations);
+
         String combined = combineText(explanation);
         if (UNSAFE_MERGE.matcher(combined).find()) {
             violations.add("unsafe merge claim");
@@ -82,6 +84,7 @@ public class ExplanationVerifier {
             }
         }
 
+        if (explanation.claims() != null) {
         for (ExplanationClaim claim : explanation.claims()) {
             if (claim.text() == null || claim.text().isBlank()) {
                 violations.add("empty claim");
@@ -105,6 +108,7 @@ public class ExplanationVerifier {
                 }
             }
         }
+        }
 
         for (var match : VERSION_INVENTION.matcher(combined).results().toList()) {
             String version = match.group(2);
@@ -117,11 +121,38 @@ public class ExplanationVerifier {
     }
 
     private static String combineText(StructuredExplanation explanation) {
-        StringBuilder sb = new StringBuilder(explanation.summary());
-        for (ExplanationClaim claim : explanation.claims()) {
-            sb.append(' ').append(claim.text());
+        StringBuilder sb = new StringBuilder(explanation.summary() != null ? explanation.summary() : "");
+        if (explanation.claims() != null) {
+            for (ExplanationClaim claim : explanation.claims()) {
+                if (claim.text() != null) {
+                    sb.append(' ').append(claim.text());
+                }
+            }
+        }
+        if (explanation.nextChecks() != null) {
+            explanation.nextChecks().forEach(line -> sb.append(' ').append(line));
+        }
+        if (explanation.limitations() != null) {
+            explanation.limitations().forEach(line -> sb.append(' ').append(line));
         }
         return sb.toString();
+    }
+
+    private static void validateUrlList(
+            List<String> lines, Set<String> allowedUrls, String field, List<String> violations) {
+        if (lines == null) {
+            return;
+        }
+        for (String line : lines) {
+            if (line == null) {
+                continue;
+            }
+            for (String url : extractUrls(line)) {
+                if (!urlAllowed(url, allowedUrls)) {
+                    violations.add("unsupported URL in " + field + ": " + url);
+                }
+            }
+        }
     }
 
     private static Set<String> allowedUrlTokens(EvidencePack pack) {
@@ -151,8 +182,14 @@ public class ExplanationVerifier {
 
     private static boolean urlAllowed(String url, Set<String> allowed) {
         for (String allowedUrl : allowed) {
-            if (url.equals(allowedUrl) || url.startsWith(allowedUrl)) {
+            if (url.equals(allowedUrl)) {
                 return true;
+            }
+            if (url.startsWith(allowedUrl) && url.length() > allowedUrl.length()) {
+                char boundary = url.charAt(allowedUrl.length());
+                if (boundary == '#' || boundary == '?' || boundary == '/') {
+                    return true;
+                }
             }
         }
         return false;

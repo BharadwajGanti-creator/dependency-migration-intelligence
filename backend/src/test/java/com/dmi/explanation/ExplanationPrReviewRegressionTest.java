@@ -88,6 +88,39 @@ class ExplanationPrReviewRegressionTest {
         assertThat(rejected.modelMetadata().aiAssisted()).isFalse();
     }
 
+    /** Remaining gap: suffix spoof must not pass as prefix extension (Guide.evil.tld). */
+    @Test
+    void rejectsUrlSuffixSpoofAfterAllowedPrefix() {
+        String allowed = "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide";
+        EvidencePack pack = packWithDoc(allowed);
+        StructuredExplanation bad = new StructuredExplanation(
+                "jakarta-servlet-api",
+                "See docs",
+                List.of(new ExplanationClaim(
+                        "Proof at " + allowed + ".evil.example/fake",
+                        List.of("ev-2"))),
+                List.of(),
+                List.of());
+
+        assertThat(verifier.verify(pack, review(), bad).accepted()).isFalse();
+    }
+
+    /** Remaining gap: URLs smuggled via limitations/nextChecks must be validated. */
+    @Test
+    void rejectsUnsupportedUrlInLimitationsList() {
+        EvidencePack pack = packWithDoc("https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide");
+        StructuredExplanation bad = new StructuredExplanation(
+                "jakarta-servlet-api",
+                "Summary without URLs.",
+                List.of(new ExplanationClaim("Grounded claim.", List.of("ev-2"))),
+                List.of(),
+                List.of("See https://evil.example/limitations-bypass"));
+
+        var result = verifier.verify(pack, review(), bad);
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.violations()).anyMatch(v -> v.contains("unsupported URL in limitations"));
+    }
+
     /** Finding #4: URL allowlist must not accept prefix-spoof shorter URLs. */
     @Test
     void finding4_urlAllowlistRejectsPrefixSpoof() {
