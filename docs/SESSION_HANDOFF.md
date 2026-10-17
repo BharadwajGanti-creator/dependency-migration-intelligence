@@ -1,16 +1,16 @@
 # DMI session handoff
 
-**Last batch:** B2 product value validation on `cursor/dmi-b2-value-validation-f989`  
-**Main reference:** `f39d7d9` (B2 specs) + B1 merge `82a2737`  
-**Verification:** `docs/validation/b2-results.md`
+**Last batch:** B3 grounded explanation experiment on `cursor/dmi-b3-grounded-explanations`  
+**Main reference:** `c997eae` (B2 merged)  
+**Verification:** `docs/validation/b3-results.md`
 
 ## What works
 
-- **API:** `POST /api/v1/analyses/sync` — unchanged request; findings include optional `migrationReview` (adjudication + OpenRewrite comparison).
-- **Adjudications:** `docs/validation/b2-adjudications.json` (4 reviewed finding ids; unknown → `UNVERIFIED`).
-- **Trust:** static `confidence` separate from reviewed `verdict`; pathmatch is `REVIEW_RECOMMENDED`, not auto ACTION_REQUIRED.
-- **Tests:** `cd backend && ./mvnw verify` (**40** tests)
-- **UI:** `cd frontend && npm run build` — finding cards show review evidence and limitations.
+- **Sync API:** `POST /api/v1/analyses/sync` — unchanged; findings include optional B2 `migrationReview`.
+- **Explanations API:** `POST /api/v1/analyses/explanations` — opt-in; server recomputes report; default **disabled** (`dmi.explanation.enabled=false`).
+- **Trust:** static `confidence` vs reviewed `verdict` vs optional AI status (`DISABLED`, `FALLBACK`, `ACCEPTED`, …). Pathmatch stays `REVIEW_RECOMMENDED` / `NOT_PRESENT_IN_PATCH`.
+- **Tests:** `cd backend && ./mvnw verify` (**46** tests)
+- **UI:** sync report + optional “Request explanation” per finding (shows disabled/fallback/accepted states separately from B2 facts).
 
 ## Run locally
 
@@ -19,26 +19,26 @@ cd backend && DMI_FIXTURES_ROOT=/workspace/fixtures ./mvnw spring-boot:run
 cd frontend && npm install && npm run dev
 ```
 
-## OpenRewrite baseline
+## Real-model experiment
 
-Offline dryRun documented in `docs/baseline/openrewrite-comparison.md` and reproduced in `docs/validation/b2-results.md`. **`pathmatch-strategy`:** docs-backed review flag; runtime MVC probe still **UNVERIFIED**.
+**NOT RUN** — no external provider configured. Harness uses `deterministic-test` provider in tests only.
 
 ## Do not start without user ask
 
-P6 hosting, P7 LLM, auth, PostgreSQL, new fixtures/migrations, Gradle, arbitrary GitHub URLs.
+Hosted AI, auth, PostgreSQL, new fixtures/migrations, RAG, arbitrary repo ingestion.
 
 ## Fresh-chat prompt
 
 ```
-Continue DMI on main or cursor/dmi-b2-value-validation-f989 after B2 PR merge. Read docs/SESSION_HANDOFF.md and docs/validation/b2-results.md. Next bounded task per user — no scope expansion.
+Continue DMI on main after B3 PR merge. Read docs/SESSION_HANDOFF.md and docs/validation/b3-results.md. Next bounded task per user — no scope expansion.
 ```
 
 ## Key paths
 
 | Path | Purpose |
 |------|---------|
-| `backend/.../validation/AdjudicationRegistry.java` | Loads reviewed adjudications |
-| `backend/.../validation/MigrationReviewEnricher.java` | Attaches `migrationReview` to findings |
-| `docs/validation/b2-adjudications.json` | Reviewed verdict dataset |
-| `docs/validation/b2-api-contract.md` | API additive contract |
-| `docs/next-batch/01_B2_*.md` | B2 product/spec (planning) |
+| `backend/.../explanation/ExplanationService.java` | Explanations orchestration |
+| `backend/.../explanation/ExplanationVerifier.java` | Output validation |
+| `docs/validation/b3-api-contract.md` | Explanations API contract |
+| `docs/adrs/003-grounded-explanations-b3.md` | B3 architecture ADR |
+| `backend/src/test/resources/validation/b3-labelled-cases.json` | 14-case verifier corpus |

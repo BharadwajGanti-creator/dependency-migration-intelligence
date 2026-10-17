@@ -220,6 +220,45 @@ body {
   color: #475569;
 }
 
+.button.secondary {
+  background: #fff;
+  border-color: var(--border);
+  color: #0f172a;
+}
+
+.explanation-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.explanation-btn {
+  margin: 0.5rem 0;
+}
+
+.explanation-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.explanation-panel.status-DISABLED,
+.explanation-panel.status-FALLBACK,
+.explanation-panel.status-TIMEOUT {
+  border-left: 4px solid #64748b;
+}
+
+.explanation-panel.status-ACCEPTED {
+  border-left: 4px solid #0284c7;
+}
+
+.badge.explanation-status {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
 .site-footer {
   margin-top: auto;
   padding: 1rem;

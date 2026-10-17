@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { runAnalysis } from '../api/client'
-import type { AnalysisReport } from '../api/types'
+import { runAnalysis, runExplanations } from '../api/client'
+import type { AnalysisReport, FindingExplanation } from '../api/types'
 import { FindingList } from '../components/FindingList'
 
 const DEFAULT_REQUEST = {
@@ -16,6 +16,11 @@ export function Analyzer() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [report, setReport] = useState<AnalysisReport | null>(null)
+  const [explanationsByFindingId, setExplanationsByFindingId] = useState<
+    Record<string, FindingExplanation>
+  >({})
+  const [explanationLoadingId, setExplanationLoadingId] = useState<string | null>(null)
+  const [explanationError, setExplanationError] = useState<string | null>(null)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -24,11 +29,34 @@ export function Analyzer() {
     try {
       const result = await runAnalysis(DEFAULT_REQUEST)
       setReport(result)
+      setExplanationsByFindingId({})
+      setExplanationError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed')
       setReport(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function onRequestExplanation(findingId: string) {
+    if (!report) return
+    setExplanationLoadingId(findingId)
+    setExplanationError(null)
+    try {
+      const result = await runExplanations({
+        analysis: DEFAULT_REQUEST,
+        findingIds: [findingId],
+      })
+      const next: Record<string, FindingExplanation> = { ...explanationsByFindingId }
+      for (const ex of result.explanations) {
+        next[ex.findingId] = ex
+      }
+      setExplanationsByFindingId(next)
+    } catch (err) {
+      setExplanationError(err instanceof Error ? err.message : 'Explanation request failed')
+    } finally {
+      setExplanationLoadingId(null)
     }
   }
 
@@ -64,7 +92,13 @@ export function Analyzer() {
             </p>
           </header>
 
-          <FindingList findings={report.findings} />
+          <FindingList
+            findings={report.findings}
+            explanationsByFindingId={explanationsByFindingId}
+            onRequestExplanation={onRequestExplanation}
+            explanationLoadingId={explanationLoadingId}
+            explanationError={explanationError}
+          />
 
           <div className="limitations">
             <h3>Limitations</h3>
