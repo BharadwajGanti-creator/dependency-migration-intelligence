@@ -110,9 +110,17 @@ public class SourceEvidenceScanner {
 
     private void markDeepAllowlistedFiles(Path root, AtomicBoolean partial, List<ScanDiagnostic> diagnostics) {
         try {
-            if (FixtureBounds.hasMatchingFileBeyondDepth(root, MAX_DEPTH, this::isAllowlisted)) {
-                partial.set(true);
-                diagnostics.add(new ScanDiagnostic("DEPTH_LIMIT_REACHED", "eligible files exist beyond maxDepth=" + MAX_DEPTH));
+            FixtureBounds.DepthProbeResult probe = FixtureBounds.probeBeyondDepth(root, MAX_DEPTH, this::isAllowlisted);
+            switch (probe.status()) {
+                case DEEP_FILE_FOUND -> {
+                    partial.set(true);
+                    diagnostics.add(new ScanDiagnostic("DEPTH_LIMIT_REACHED", probe.detail()));
+                }
+                case METADATA_BUDGET_EXCEEDED -> {
+                    partial.set(true);
+                    diagnostics.add(new ScanDiagnostic("METADATA_BUDGET_EXCEEDED", probe.detail()));
+                }
+                case CLEAR -> { }
             }
         } catch (IOException e) {
             partial.set(true);

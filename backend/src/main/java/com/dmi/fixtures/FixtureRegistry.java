@@ -64,11 +64,18 @@ public class FixtureRegistry {
      */
     public FixtureDigestResult digest(Path fixtureRoot) {
         try {
-            if (FixtureBounds.hasMatchingFileBeyondDepth(fixtureRoot, MAX_DEPTH, path -> true)) {
+            FixtureBounds.DepthProbeResult probe = FixtureBounds.probeBeyondDepth(fixtureRoot, MAX_DEPTH, path -> true);
+            if (probe.status() == FixtureBounds.DepthProbeStatus.DEEP_FILE_FOUND) {
                 throw new AnalysisException(
                         HttpStatus.UNPROCESSABLE_ENTITY,
                         "FIXTURE_DEPTH_EXCEEDED",
-                        "Fixture contains files beyond depth limit " + MAX_DEPTH);
+                        "Fixture contains files beyond depth limit " + MAX_DEPTH + ": " + probe.detail());
+            }
+            if (probe.status() == FixtureBounds.DepthProbeStatus.METADATA_BUDGET_EXCEEDED) {
+                throw new AnalysisException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "FIXTURE_METADATA_BUDGET_EXCEEDED",
+                        "Cannot attest fixture layout within metadata budget: " + probe.detail());
             }
             List<String> limitations = new ArrayList<>();
             limitations.add("fixtureDigest covers all regular files within depth " + MAX_DEPTH
