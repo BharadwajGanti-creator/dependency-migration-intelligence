@@ -75,7 +75,7 @@ Do **not** infer human usefulness from this batch alone.
 
 | Command | Result |
 |---------|--------|
-| `cd backend && ./mvnw verify` | PASS — **63** tests, 0 failures |
+| `cd backend && ./mvnw verify` | PASS — **64** tests, 0 failures |
 | `cd frontend && npm ci && npm run build` | PASS |
 
 ## Proposed next decision
