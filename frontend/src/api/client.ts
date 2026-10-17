@@ -1,4 +1,10 @@
-import type { AnalysisReport, AnalysisRequest, ApiError } from './types'
+import type {
+  AnalysisReport,
+  AnalysisRequest,
+  ApiError,
+  ExplanationRequest,
+  ExplanationsResponse,
+} from './types'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 
@@ -14,4 +20,18 @@ export async function runAnalysis(body: AnalysisRequest): Promise<AnalysisReport
     throw new Error(`${err.code}: ${err.message}`)
   }
   return payload as AnalysisReport
+}
+
+export async function runExplanations(body: ExplanationRequest): Promise<ExplanationsResponse> {
+  const res = await fetch(`${API_BASE}/api/v1/analyses/explanations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const payload = await res.json()
+  if (!res.ok) {
+    const err = payload as ApiError
+    throw new Error(`${err.code}: ${err.message}`)
+  }
+  return payload as ExplanationsResponse
 }

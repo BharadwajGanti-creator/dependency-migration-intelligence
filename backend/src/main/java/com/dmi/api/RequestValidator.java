@@ -4,6 +4,9 @@ import com.dmi.domain.AnalysisRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @Component
@@ -12,6 +15,7 @@ public class RequestValidator {
     private static final Pattern FIXTURE_ID = Pattern.compile("^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$|^[a-z0-9]$");
     private static final Pattern MAVEN_TOKEN = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._\\-]{0,127}$");
     private static final Pattern VERSION = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._\\-]{0,63}$");
+    private static final Pattern FINDING_ID = Pattern.compile("^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$|^[a-z0-9]$");
 
     public void validate(AnalysisRequest request) {
         rejectTraversal(request.fixtureId(), "fixtureId");
@@ -38,6 +42,22 @@ public class RequestValidator {
     private void rejectTraversal(String value, String field) {
         if (value.contains("..") || value.contains("/") || value.contains("\\") || value.indexOf('\0') >= 0) {
             throw badRequest("UNSAFE_INPUT", field + " contains disallowed characters");
+        }
+    }
+
+    public void validateFindingIds(List<String> findingIds) {
+        Set<String> seen = new HashSet<>();
+        for (String findingId : findingIds) {
+            if (findingId == null || findingId.isBlank()) {
+                throw badRequest("INVALID_FINDING_ID", "findingIds must not contain blank entries");
+            }
+            rejectTraversal(findingId, "findingId");
+            if (!FINDING_ID.matcher(findingId).matches()) {
+                throw badRequest("INVALID_FINDING_ID", "findingId format is invalid: " + findingId);
+            }
+            if (!seen.add(findingId)) {
+                throw badRequest("DUPLICATE_FINDING_ID", "findingIds must not contain duplicates");
+            }
         }
     }
 

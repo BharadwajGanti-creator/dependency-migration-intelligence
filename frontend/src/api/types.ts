@@ -80,3 +80,44 @@ export interface ApiError {
   traceId: string
   details: string[]
 }
+
+export type ExplanationStatus =
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'DISABLED'
+  | 'FALLBACK'
+  | 'TIMEOUT'
+
+export interface ExplanationClaim {
+  text: string
+  evidenceIds: string[]
+}
+
+export interface ExplanationModelMetadata {
+  provider: string
+  modelId: string
+  aiAssisted: boolean
+  experimentStatus: string
+}
+
+export interface FindingExplanation {
+  findingId: string
+  evidencePackId: string
+  status: ExplanationStatus
+  summary: string
+  claims: ExplanationClaim[]
+  nextChecks: string[]
+  limitations: string[]
+  modelMetadata: ExplanationModelMetadata
+  deterministicReview?: MigrationReview
+}
+
+export interface ExplanationsResponse {
+  report: AnalysisReport
+  explanations: FindingExplanation[]
+}
+
+export interface ExplanationRequest {
+  analysis: AnalysisRequest
+  findingIds: string[]
+}

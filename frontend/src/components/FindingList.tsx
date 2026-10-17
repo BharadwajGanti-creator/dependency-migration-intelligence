@@ -1,9 +1,17 @@
-import type { Finding, MigrationVerdict } from '../api/types'
+import type { ExplanationStatus, Finding, FindingExplanation, MigrationVerdict } from '../api/types'
 
 const confidenceLabel: Record<Finding['confidence'], string> = {
   CONFIRMED_STATIC: 'Confirmed (static)',
   POSSIBLE: 'Possible',
   NOT_ASSESSED: 'Not assessed',
+}
+
+const explanationStatusLabel: Record<ExplanationStatus, string> = {
+  ACCEPTED: 'AI-assisted explanation (accepted)',
+  REJECTED: 'AI explanation rejected',
+  DISABLED: 'AI explanations disabled',
+  FALLBACK: 'Deterministic fallback',
+  TIMEOUT: 'Explanation timed out',
 }
 
 const verdictLabel: Record<MigrationVerdict, string> = {
@@ -14,7 +22,19 @@ const verdictLabel: Record<MigrationVerdict, string> = {
   UNVERIFIED: 'Reviewed: unverified',
 }
 
-export function FindingList({ findings }: { findings: Finding[] }) {
+export function FindingList({
+  findings,
+  explanationsByFindingId = {},
+  onRequestExplanation,
+  explanationLoadingId,
+  explanationError,
+}: {
+  findings: Finding[]
+  explanationsByFindingId?: Record<string, FindingExplanation>
+  onRequestExplanation?: (findingId: string) => void
+  explanationLoadingId?: string | null
+  explanationError?: string | null
+}) {
   if (findings.length === 0) {
     return <p className="muted">No findings returned.</p>
   }
@@ -124,6 +144,51 @@ export function FindingList({ findings }: { findings: Finding[] }) {
             </div>
           )}
           <p className="rationale">{f.rationale}</p>
+
+          <div className="explanation-section" aria-live="polite">
+            <h4>Optional AI-assisted explanation</h4>
+            <p className="review-note muted">
+              Opt-in only. Reviewed B2 facts above remain authoritative; explanations never imply runtime
+              verification or merge safety.
+            </p>
+            {onRequestExplanation && (
+              <button
+                type="button"
+                className="button secondary explanation-btn"
+                disabled={!!explanationLoadingId}
+                onClick={() => onRequestExplanation(f.id)}
+              >
+                {explanationLoadingId === f.id ? 'Requesting…' : 'Request explanation'}
+              </button>
+            )}
+            {explanationError && explanationLoadingId === null && !explanationsByFindingId[f.id] && (
+              <p className="alert error" role="alert">
+                {explanationError}
+              </p>
+            )}
+            {explanationsByFindingId[f.id] && (
+              <div className={`explanation-panel status-${explanationsByFindingId[f.id].status}`}>
+                <span className="badge explanation-status">
+                  {explanationStatusLabel[explanationsByFindingId[f.id].status]}
+                </span>
+                <p>{explanationsByFindingId[f.id].summary}</p>
+                {explanationsByFindingId[f.id].claims.length > 0 && (
+                  <ul>
+                    {explanationsByFindingId[f.id].claims.map((c) => (
+                      <li key={c.text}>
+                        {c.text}{' '}
+                        <span className="muted">(evidence: {c.evidenceIds.join(', ')})</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="muted">
+                  Provider: {explanationsByFindingId[f.id].modelMetadata.provider} · experiment:{' '}
+                  {explanationsByFindingId[f.id].modelMetadata.experimentStatus}
+                </p>
+              </div>
+            )}
+          </div>
         </li>
       ))}
     </ul>
