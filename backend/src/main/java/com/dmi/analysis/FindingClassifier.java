@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,34 +23,51 @@ public class FindingClassifier {
         boolean partial = scanResult.completeness() == ScanCompleteness.PARTIAL;
 
         for (AdvisoryCatalogue.CatalogueEntry entry : entries) {
-            Set<SourceLocation> locations = new HashSet<>();
+            Set<SourceLocation> executableLocations = new LinkedHashSet<>();
+            Set<SourceLocation> commentLocations = new LinkedHashSet<>();
             for (String patternStr : entry.sourcePatterns()) {
                 if (patternStr.isBlank()) {
                     continue;
                 }
                 for (SourceEvidenceScanner.ScanMatch match : scanResult.matches()) {
-                    if (patternStr.equals(match.patternKey())) {
-                        locations.add(new SourceLocation(match.relativePath(), match.line()));
+                    if (!patternStr.equals(match.patternKey())) {
+                        continue;
+                    }
+                    SourceLocation loc = new SourceLocation(match.relativePath(), match.line());
+                    if (match.commentOnly()) {
+                        commentLocations.add(loc);
+                    } else {
+                        executableLocations.add(loc);
                     }
                 }
             }
-            List<SourceLocation> sortedLocations = locations.stream()
+            List<SourceLocation> sortedExecutable = executableLocations.stream()
                     .sorted(Comparator.comparing(SourceLocation::path).thenComparingInt(SourceLocation::line))
                     .toList();
 
             Confidence confidence;
             String rationale;
-            if (!sortedLocations.isEmpty()) {
+            List<SourceLocation> reportedLocations;
+            if (!sortedExecutable.isEmpty()) {
                 confidence = Confidence.CONFIRMED_STATIC;
-                rationale = "Static pattern match in fixture source with curated documentation linkage.";
+                rationale = "Static pattern match on non-comment source line with curated documentation linkage.";
+                reportedLocations = new ArrayList<>(sortedExecutable);
+            } else if (!commentLocations.isEmpty()) {
+                confidence = Confidence.POSSIBLE;
+                rationale = "Pattern matched comment or non-executable line only; does not prove live code or config uses this API.";
+                reportedLocations = commentLocations.stream()
+                        .sorted(Comparator.comparing(SourceLocation::path).thenComparingInt(SourceLocation::line))
+                        .toList();
             } else if (entry.sourcePatterns().isEmpty()) {
                 confidence = Confidence.POSSIBLE;
                 rationale = "Documentation-only guidance for the requested upgrade; no static signal configured.";
+                reportedLocations = List.of();
             } else {
                 confidence = Confidence.NOT_ASSESSED;
                 rationale = partial
                         ? "Catalogue rule exists but scan was PARTIAL; absence of match is not evidence of compatibility."
                         : "Catalogue rule exists but no matching source evidence in bounded scan.";
+                reportedLocations = List.of();
             }
 
             List<DocumentationRef> docs = entry.documentation().stream()
@@ -62,7 +79,7 @@ public class FindingClassifier {
                     "MIGRATION_SIGNAL",
                     confidence,
                     entry.summary(),
-                    new ArrayList<>(sortedLocations),
+                    new ArrayList<>(reportedLocations),
                     docs,
                     rationale,
                     new ArrayList<>(entry.proposedChecks())));

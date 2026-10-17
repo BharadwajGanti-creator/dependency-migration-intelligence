@@ -20,12 +20,12 @@ class FindingClassifierTest {
                 List.of("javax\\.servlet"),
                 List.of(),
                 List.of());
-        SourceEvidenceScanner.ScanMatch match = new SourceEvidenceScanner.ScanMatch(0, "javax\\.servlet", "src/App.java", 1, "unrelated text");
+        SourceEvidenceScanner.ScanMatch match = new SourceEvidenceScanner.ScanMatch(0, "javax\\.servlet", "src/App.java", 1, "javax.servlet", false);
         ScanResult complete = new ScanResult(List.of(match), ScanCompleteness.COMPLETE, List.of());
         var findings = classifier.classify(List.of(entry), complete);
         assertThat(findings.get(0).confidence()).isEqualTo(Confidence.CONFIRMED_STATIC);
 
-        SourceEvidenceScanner.ScanMatch wrongKey = new SourceEvidenceScanner.ScanMatch(0, "other-pattern", "src/App.java", 1, "javax.servlet");
+        SourceEvidenceScanner.ScanMatch wrongKey = new SourceEvidenceScanner.ScanMatch(0, "other-pattern", "src/App.java", 1, "javax.servlet", false);
         ScanResult wrong = new ScanResult(List.of(wrongKey), ScanCompleteness.COMPLETE, List.of());
         findings = classifier.classify(List.of(entry), wrong);
         assertThat(findings.get(0).confidence()).isEqualTo(Confidence.NOT_ASSESSED);

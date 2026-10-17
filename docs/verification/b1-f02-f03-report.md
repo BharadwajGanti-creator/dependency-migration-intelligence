@@ -4,38 +4,32 @@
 **Baseline main at branch point:** `c48f6e8`  
 **Spec:** `docs/next-batch/02_DMI_Implementation_Batch_Spec.md`
 
-## Commands executed
+## Commands executed (latest)
 
 | Command | Result |
 |---------|--------|
-| `cd backend && ./mvnw verify` | **PASS** — 21 tests, 0 failures |
+| `cd backend && ./mvnw verify` | **PASS** — **28** tests, 0 failures |
 | `cd frontend && npm run build` | **PASS** |
-| API matrix (MockMvc + manual curl on running instance) | 200/400/404/422 paths covered in integration tests |
+
+## Principal review fixes (same branch)
+
+| Finding | Resolution |
+|---------|------------|
+| Depth completeness gap (MAX_DEPTH+3) | Unlimited metadata walk via `FixtureBounds`; `COMPLETE` only when no deeper allowlisted files |
+| `fixtureDigest` semantics | **dmi-digest-v3** + `FixtureDigestResult`; fail closed `FIXTURE_DEPTH_EXCEEDED`; documented vs scanner in ADR-002 |
+| Comment-only matches | `commentOnly` on `ScanMatch`; classifier → **POSSIBLE** + rationale |
+| Unresolved parent version | **422 `PARENT_VERSION_UNRESOLVED`** (not misleading `VERSION_MISMATCH`) |
+| Scanner vs digest rules | ADR-002 table + digest limitation string in API report |
+| Regression tests | `FixtureRegistryDigestTest`, `CommentOnlyFindingTest`, `ParentVersionUnresolvedTest`, extended depth test |
 
 ## Acceptance gates
 
-| ID | Result | Evidence |
-|----|--------|----------|
-| G01 | PASS | `MavenManifestReaderEdgeCaseTest` excludes DM/plugin/profile deps |
-| G02 | PASS | `unresolved-property.xml` → UNRESOLVED_PROPERTY + MANAGED_OR_UNKNOWN limitations |
-| G03 | PASS | DOCTYPE rejected 422; secure JAXP features; oversized POM |
-| G04 | PASS | `SourceEvidenceScannerTest` oversized/depth/UTF-8; symlink skip codes |
-| G05 | PASS | `FindingClassifierTest` exact patternKey; no excerpt re-match |
-| G06 | PASS | PARTIAL scan rationale + limitations propagation |
-| G07 | PASS | Golden IDs/lines; React build; API contract unchanged |
-| G08 | PASS | Full verify + frontend build executed |
-| G09 | PASS | Feature branch pushed; draft PR (see below) |
-| G10 | PASS | This file + updated handoff |
-
-## Design notes
-
-- **Digest algorithm v2** (`dmi-digest-v2` prefix + bounded walk) — `fixtureDigest` value changed vs MVP.
-- **Manifest limitations** now include managed/unresolved direct dependency honesty for fixture `spring-boot-starter-web`.
-- OpenRewrite baseline (`docs/baseline/openrewrite-comparison.md`) **unchanged**.
-- `pathmatch-strategy` incremental value remains **not fully validated** (per F07).
+| ID | Result |
+|----|--------|
+| G01–G10 | **PASS** (unchanged intent; evidence updated above) |
 
 ## Residual risks
 
-- Depth probe walks to MAX_DEPTH+3 (conservative PARTIAL; not a sandbox).
-- Live dev server may lag compiled code until restarted.
-- No runtime Maven effective-POM resolution (by design).
+- `pathmatch-strategy` / OpenRewrite differentiation still not fully validated.
+- Digest/scanner depth policy assumes fixture layout ≤ `MAX_DEPTH`; deeper layout fails digest (by design).
+- No runtime Maven effective-POM resolution.

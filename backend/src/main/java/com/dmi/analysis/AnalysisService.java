@@ -58,9 +58,18 @@ public class AnalysisService {
         }
 
         Path fixtureRoot = fixtureRegistry.resolveFixtureRoot(request.fixtureId());
-        String digest = fixtureRegistry.digest(fixtureRoot);
+        var digestResult = fixtureRegistry.digest(fixtureRoot);
+        String digest = digestResult.digest();
         MavenManifestReader.ManifestReadResult manifestResult = mavenManifestReader.read(fixtureRoot);
         MavenManifestReader.MavenManifest manifest = manifestResult.manifest();
+
+        MavenManifestReader.ParentInfo parentInfo = manifest.parent();
+        if (parentInfo != null && parentInfo.version().resolution() == VersionResolution.UNRESOLVED_PROPERTY) {
+            throw new AnalysisException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "PARENT_VERSION_UNRESOLVED",
+                    "Parent version property could not be resolved from pom.xml");
+        }
 
         var declaredParent = mavenManifestReader.resolveParent(
                 manifest, request.dependencyGroup(), request.dependencyArtifact());
@@ -84,6 +93,7 @@ public class AnalysisService {
         List<Finding> findings = findingClassifier.classify(advisoryCatalogue.entries(), scanResult);
 
         List<String> limitations = new ArrayList<>(ReportComposer.defaultLimitations());
+        limitations.addAll(digestResult.limitations());
         manifestResult.diagnostics().forEach(d -> limitations.add("Manifest: " + d.code() + " — " + d.message()));
         manifest.dependencies().stream()
                 .filter(d -> d.version().resolution() == VersionResolution.UNRESOLVED_PROPERTY)

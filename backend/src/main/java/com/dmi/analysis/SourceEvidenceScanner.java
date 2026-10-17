@@ -1,6 +1,7 @@
 package com.dmi.analysis;
 
 import com.dmi.domain.SourceLocation;
+import com.dmi.fixtures.FixtureBounds;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -33,14 +34,11 @@ public class SourceEvidenceScanner {
         AtomicBoolean partial = new AtomicBoolean(false);
 
         Path normalizedRoot = fixtureRoot.toAbsolutePath().normalize();
-        if (hasDeepEligibleFiles(normalizedRoot, partial, diagnostics)) {
-            partial.set(true);
-        }
+        markDeepAllowlistedFiles(normalizedRoot, partial, diagnostics);
 
         List<Path> eligible = collectEligibleFiles(normalizedRoot, partial, diagnostics);
         int filesScanned = 0;
         long totalBytes = 0;
-
         for (Path file : eligible) {
             if (filesScanned >= MAX_FILES) {
                 partial.set(true);
@@ -90,9 +88,16 @@ public class SourceEvidenceScanner {
             String[] lines = content.split("\\R", -1);
             for (int lineNum = 0; lineNum < lines.length; lineNum++) {
                 String line = lines[lineNum];
+                boolean commentOnly = isCommentOnlyLine(line, relative);
                 for (PatternDescriptor descriptor : patterns) {
                     if (descriptor.compiled().matcher(line).find()) {
-                        matches.add(new ScanMatch(descriptor.index(), descriptor.patternKey(), relative, lineNum + 1, line.trim()));
+                        matches.add(new ScanMatch(
+                                descriptor.index(),
+                                descriptor.patternKey(),
+                                relative,
+                                lineNum + 1,
+                                line.trim(),
+                                commentOnly));
                     }
                 }
             }
@@ -101,6 +106,18 @@ public class SourceEvidenceScanner {
         matches.sort(Comparator.comparing(ScanMatch::relativePath).thenComparingInt(ScanMatch::line).thenComparingInt(ScanMatch::patternIndex));
         ScanCompleteness completeness = partial.get() ? ScanCompleteness.PARTIAL : ScanCompleteness.COMPLETE;
         return new ScanResult(List.copyOf(matches), completeness, List.copyOf(diagnostics));
+    }
+
+    private void markDeepAllowlistedFiles(Path root, AtomicBoolean partial, List<ScanDiagnostic> diagnostics) {
+        try {
+            if (FixtureBounds.hasMatchingFileBeyondDepth(root, MAX_DEPTH, this::isAllowlisted)) {
+                partial.set(true);
+                diagnostics.add(new ScanDiagnostic("DEPTH_LIMIT_REACHED", "eligible files exist beyond maxDepth=" + MAX_DEPTH));
+            }
+        } catch (IOException e) {
+            partial.set(true);
+            diagnostics.add(new ScanDiagnostic("WALK_FAILED", "depth-probe"));
+        }
     }
 
     private List<Path> collectEligibleFiles(Path root, AtomicBoolean partial, List<ScanDiagnostic> diagnostics) {
@@ -135,32 +152,18 @@ public class SourceEvidenceScanner {
         return files;
     }
 
-    private boolean hasDeepEligibleFiles(Path root, AtomicBoolean partial, List<ScanDiagnostic> diagnostics) {
-        AtomicBoolean found = new AtomicBoolean(false);
-        try {
-            Files.walkFileTree(root, java.util.EnumSet.noneOf(java.nio.file.FileVisitOption.class), MAX_DEPTH + 3, new SimpleFileVisitor<>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    if (Files.isSymbolicLink(file)) {
-                        return FileVisitResult.CONTINUE;
-                    }
-                    if (!attrs.isRegularFile() || !isAllowlisted(file)) {
-                        return FileVisitResult.CONTINUE;
-                    }
-                    int depth = root.relativize(file.normalize()).getNameCount();
-                    if (depth > MAX_DEPTH) {
-                        found.set(true);
-                        partial.set(true);
-                        diagnostics.add(new ScanDiagnostic("DEPTH_LIMIT_REACHED", rel(root, file)));
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        } catch (IOException e) {
-            partial.set(true);
-            diagnostics.add(new ScanDiagnostic("WALK_FAILED", "depth-probe"));
+    static boolean isCommentOnlyLine(String line, String relativePath) {
+        String trimmed = line.trim();
+        if (trimmed.isEmpty()) {
+            return true;
         }
-        return found.get();
+        if (relativePath.endsWith(".properties") || relativePath.endsWith(".yml") || relativePath.endsWith(".yaml")) {
+            return trimmed.startsWith("#");
+        }
+        if (relativePath.endsWith(".java")) {
+            return trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*");
+        }
+        return false;
     }
 
     private boolean isValidUtf8(byte[] bytes) {
@@ -184,7 +187,7 @@ public class SourceEvidenceScanner {
                 .toList();
     }
 
-    private boolean isAllowlisted(Path path) {
+    boolean isAllowlisted(Path path) {
         String name = path.getFileName().toString();
         if (name.equals("pom.xml")) {
             return true;
@@ -199,5 +202,5 @@ public class SourceEvidenceScanner {
         return root.relativize(file).toString().replace('\\', '/');
     }
 
-    public record ScanMatch(int patternIndex, String patternKey, String relativePath, int line, String excerpt) {}
+    public record ScanMatch(int patternIndex, String patternKey, String relativePath, int line, String excerpt, boolean commentOnly) {}
 }

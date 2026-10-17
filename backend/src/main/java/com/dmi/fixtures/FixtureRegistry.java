@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
@@ -18,10 +19,13 @@ import java.util.Set;
 
 import static com.dmi.analysis.SourceEvidenceScanner.MAX_DEPTH;
 import static com.dmi.analysis.SourceEvidenceScanner.MAX_FILE_BYTES;
+import static com.dmi.analysis.SourceEvidenceScanner.MAX_FILES;
 import static com.dmi.analysis.SourceEvidenceScanner.MAX_TOTAL_BYTES;
 
 @Component
 public class FixtureRegistry {
+
+    public static final String DIGEST_ALGORITHM_LABEL = "dmi-digest-v3";
 
     private static final Set<String> KNOWN_FIXTURES = Set.of("spring-migration-case");
 
@@ -53,19 +57,37 @@ public class FixtureRegistry {
         return root;
     }
 
-    public String digest(Path fixtureRoot) {
+    /**
+     * Snapshot identity: all regular non-symlink files within {@link MAX_DEPTH}, sorted by relative path.
+     * Fails closed if any regular file exists deeper than MAX_DEPTH (layout exceeds bounded snapshot).
+     * Unlike the source scanner, digest includes every file type (not only allowlisted sources).
+     */
+    public FixtureDigestResult digest(Path fixtureRoot) {
         try {
+            if (FixtureBounds.hasMatchingFileBeyondDepth(fixtureRoot, MAX_DEPTH, path -> true)) {
+                throw new AnalysisException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "FIXTURE_DEPTH_EXCEEDED",
+                        "Fixture contains files beyond depth limit " + MAX_DEPTH);
+            }
+            List<String> limitations = new ArrayList<>();
+            limitations.add("fixtureDigest covers all regular files within depth " + MAX_DEPTH
+                    + "; source scan inspects allowlisted types only (see ADR-002).");
+
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            md.update("dmi-digest-v2".getBytes());
+            md.update(DIGEST_ALGORITHM_LABEL.getBytes());
             List<Path> files = Files.walk(fixtureRoot, MAX_DEPTH)
                     .filter(p -> Files.isRegularFile(p) && !Files.isSymbolicLink(p))
                     .sorted(Comparator.naturalOrder())
                     .toList();
+            if (files.size() > MAX_FILES) {
+                throw new AnalysisException(HttpStatus.UNPROCESSABLE_ENTITY, "FIXTURE_TOO_MANY_FILES", "Fixture exceeds file count limit");
+            }
             long totalBytes = 0;
             for (Path path : files) {
                 long size = Files.size(path);
                 if (size > MAX_FILE_BYTES || totalBytes + size > MAX_TOTAL_BYTES) {
-                    throw new AnalysisException(HttpStatus.UNPROCESSABLE_ENTITY, "FIXTURE_TOO_LARGE", "Fixture exceeds digest limits");
+                    throw new AnalysisException(HttpStatus.UNPROCESSABLE_ENTITY, "FIXTURE_TOO_LARGE", "Fixture exceeds digest byte limits");
                 }
                 totalBytes += size;
                 String relative = fixtureRoot.relativize(path).toString().replace('\\', '/');
@@ -73,7 +95,7 @@ public class FixtureRegistry {
                 md.update((byte) 0);
                 md.update(Files.readAllBytes(path));
             }
-            return HexFormat.of().formatHex(md.digest());
+            return new FixtureDigestResult(HexFormat.of().formatHex(md.digest()), limitations);
         } catch (NoSuchAlgorithmException | IOException e) {
             throw new IllegalStateException(e);
         }

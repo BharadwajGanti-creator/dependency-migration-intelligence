@@ -64,7 +64,7 @@ class SourceEvidenceScannerTest {
 
     @Test
     void depthBeyondLimitIsPartial(@TempDir Path temp) throws Exception {
-        Path deep = temp.resolve("src/a/b/c/d/e/f/g/h/i/j/k/l/m/Deep.java");
+        Path deep = temp.resolve("src/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/Deep.java");
         Files.createDirectories(deep.getParent());
         Files.writeString(deep, "javax.servlet.X\n");
         ScanResult result = scanner.scan(temp, List.of(pat(0, "javax\\.servlet")));
