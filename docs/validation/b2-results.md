@@ -69,7 +69,7 @@ Documented **what the executed dryRun patched** (parent, java.version, javax→j
 | `cd backend && ./mvnw verify` | **PASS — 40 tests**, 0 failures |
 | `cd frontend && npm ci && npm run build` | **PASS** |
 
-**CI:** No GitHub Actions workflow in repository; local verify used as evidence.
+**CI:** `.github/workflows/ci.yml` — PR #2 checks **4/4 SUCCESS** (backend + frontend verify/build on `ubuntu-latest`, Java 21, Node 22). Local runs above match CI commands.
 
 ## V10 — Documentation updates
 
