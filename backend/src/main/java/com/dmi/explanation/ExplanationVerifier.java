@@ -63,6 +63,14 @@ public class ExplanationVerifier {
             violations.add("prompt injection pattern");
         }
 
+        if (explanation.summary() != null) {
+            for (String url : extractUrls(explanation.summary())) {
+                if (!urlAllowed(url, allowedUrls)) {
+                    violations.add("unsupported URL in summary: " + url);
+                }
+            }
+        }
+
         if (review != null && review.verdict() == MigrationVerdict.REVIEW_RECOMMENDED) {
             if (Pattern.compile("(?i)action\\s+required|mandatory\\s+migration|must\\s+change\\s+pathmatch")
                     .matcher(combined)
@@ -143,7 +151,7 @@ public class ExplanationVerifier {
 
     private static boolean urlAllowed(String url, Set<String> allowed) {
         for (String allowedUrl : allowed) {
-            if (url.startsWith(allowedUrl) || allowedUrl.startsWith(url)) {
+            if (url.equals(allowedUrl) || url.startsWith(allowedUrl)) {
                 return true;
             }
         }

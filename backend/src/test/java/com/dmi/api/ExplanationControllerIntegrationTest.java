@@ -183,6 +183,9 @@ class ExplanationInvalidOutputIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.explanations[0].status").value("REJECTED"))
                 .andExpect(jsonPath("$.explanations[0].deterministicReview.verdict").value("REVIEW_RECOMMENDED"))
+                .andExpect(jsonPath("$.explanations[0].modelMetadata.experimentStatus").value("REJECTED_BY_VERIFIER"))
+                .andExpect(jsonPath("$.explanations[0].summary").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Mandatory migration"))))
+                .andExpect(jsonPath("$.explanations[0].claims[0].text").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("action required for ant_path_matcher"))))
                 .andExpect(jsonPath("$.report.findings", hasSize(4)));
     }
 }

@@ -22,7 +22,19 @@ public final class DeterministicFallbackBuilder {
     }
 
     public static FindingExplanation rejected(Finding finding, EvidencePack pack, String reason) {
-        return build(finding, pack, ExplanationStatus.REJECTED, reason);
+        FindingExplanation base = build(finding, pack, ExplanationStatus.REJECTED, reason);
+        ExplanationModelMetadata metadata = new ExplanationModelMetadata(
+                "deterministic-b2", "migration-review", false, "REJECTED_BY_VERIFIER");
+        return new FindingExplanation(
+                base.findingId(),
+                base.evidencePackId(),
+                ExplanationStatus.REJECTED,
+                base.summary(),
+                base.claims(),
+                base.nextChecks(),
+                base.limitations(),
+                metadata,
+                base.deterministicReview());
     }
 
     public static FindingExplanation acceptedFromVerified(

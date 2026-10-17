@@ -9,19 +9,19 @@
 
 | Command | Result |
 |---------|--------|
-| `cd backend && ./mvnw verify` | PASS — **51** tests, 0 failures |
+| `cd backend && ./mvnw verify` | PASS — **54** tests, 0 failures |
 | `cd frontend && npm ci && npm run build` | PASS |
 
 With default properties, `POST /api/v1/analyses/explanations` returns `DISABLED` explanations while preserving full sync-equivalent `report`. Integration test asserts embedded `report.findings` equals sync response findings JSON.
 
 ## PR review fixes (VERIFIED)
 
-| Finding | Fix |
-|---------|-----|
-| Verifier fail-open on unknown URLs | `urlAllowed` returns false when URL not in pack docs |
-| Verifier failures surfaced as `FALLBACK` only | Invalid model output → `REJECTED` + retained `deterministicReview` |
-| `findingIds` not validated | `RequestValidator.validateFindingIds` (format, traversal, duplicates) |
-| Negative/security coverage gaps | `ExplanationVerifierSecurityTest`, invalid-output integration test, unsafe/duplicate id API tests |
+| # | Finding | Fix | Regression |
+|---|---------|-----|------------|
+| 1 | URL verifier fail-open (summary + prefix spoof) | Scan summary URLs; strict `startsWith` allowlist | `ExplanationPrReviewRegressionTest#finding1_*`, `#finding4_*` |
+| 2 | `REJECTED` must not leak model output | Deterministic envelope only; `experimentStatus=REJECTED_BY_VERIFIER` | `#finding2_*`, `ExplanationInvalidOutputIntegrationTest` |
+| 3 | Per-request executor | **Deferred** — `real-inference-enabled=false` default; sync harness path | ADR-003; enabled only when real inference explicitly allowed |
+| 4 | Negative/security coverage | Security + API negative tests retained | `ExplanationVerifierSecurityTest`, controller integration tests |
 
 ## A2 — Sanitized evidence packs (VERIFIED)
 

@@ -72,7 +72,7 @@ public class ExplanationService {
         }
 
         try {
-            StructuredExplanation generated = invokeWithTimeout(pack);
+            StructuredExplanation generated = generateWithOptionalTimeout(pack);
             var verifierResult = explanationVerifier.verify(pack, finding.migrationReview(), generated);
             if (verifierResult.accepted()) {
                 ExplanationModelMetadata metadata = new ExplanationModelMetadata(
@@ -99,8 +99,11 @@ public class ExplanationService {
         }
     }
 
-    private StructuredExplanation invokeWithTimeout(EvidencePack pack)
+    private StructuredExplanation generateWithOptionalTimeout(EvidencePack pack)
             throws TimeoutException, ExecutionException, InterruptedException, ExplanationModel.ExplanationModelException {
+        if (!properties.realInferenceEnabled()) {
+            return explanationModel.generate(pack);
+        }
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             Future<StructuredExplanation> future = executor.submit(() -> explanationModel.generate(pack));

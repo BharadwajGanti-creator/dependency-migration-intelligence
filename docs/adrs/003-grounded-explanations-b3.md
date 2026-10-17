@@ -16,7 +16,9 @@ Add an **opt-in** `POST /api/v1/analyses/explanations` endpoint. The server reco
 
 ## Verification
 
-Structured provider output passes through `ExplanationVerifier` (schema-ish checks, evidence ID allow-list, verdict contradiction guards, injection/oversize rejection). Failures and disabled provider return **deterministic B2 fallback** without mutating findings.
+Structured provider output passes through `ExplanationVerifier` (schema-ish checks, evidence ID allow-list, URL allow-list on **summary and claims**, verdict contradiction guards, injection/oversize rejection). Verifier failures return **`REJECTED`** with deterministic B2 content only (no model text). Disabled provider returns **deterministic B2 fallback** without mutating findings.
+
+Per-call timeout `ExecutorService` is used **only** when `dmi.explanation.real-inference-enabled=true` (default **false**; no external inference authorized in this batch). Harness/test providers run synchronously.
 
 ## UI
 

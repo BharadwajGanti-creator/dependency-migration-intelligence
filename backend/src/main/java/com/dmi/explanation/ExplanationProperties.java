@@ -6,6 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class ExplanationProperties {
 
     private boolean enabled;
+    /** When false (default), harness providers run synchronously without timeout executor. */
+    private boolean realInferenceEnabled;
     private String provider = "disabled";
     private long timeoutMs = 5_000;
     private int maxSummaryChars = 2_000;
@@ -18,6 +20,14 @@ public class ExplanationProperties {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean realInferenceEnabled() {
+        return realInferenceEnabled;
+    }
+
+    public void setRealInferenceEnabled(boolean realInferenceEnabled) {
+        this.realInferenceEnabled = realInferenceEnabled;
     }
 
     public String provider() {

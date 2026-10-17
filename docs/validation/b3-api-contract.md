@@ -35,6 +35,8 @@
 
 With `dmi.explanation.enabled=false`, every explanation returns `status=DISABLED` and B2 curated text; sync endpoint behavior is unchanged.
 
+`dmi.explanation.real-inference-enabled=false` (default) keeps harness providers synchronous; timeout executor applies only when real inference is explicitly enabled.
+
 ## Errors
 
 Same validation as sync for `analysis`, plus:
