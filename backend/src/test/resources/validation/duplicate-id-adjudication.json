@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "catalogueId": "spring-boot-2-to-3",
+  "migrationPair": {
+    "group": "org.springframework.boot",
+    "artifact": "spring-boot-starter-parent",
+    "fromVersion": "2.7.18",
+    "toVersion": "3.2.12"
+  },
+  "entries": [
+    {
+      "findingId": "jakarta-servlet-api",
+      "verdict": "ACTION_REQUIRED",
+      "openRewriteComparison": "PATCHED_IN_BASELINE",
+      "evidenceProves": "x",
+      "evidence": [],
+      "testedScenario": "x",
+      "openRewriteRecipe": "r",
+      "openRewritePluginVersion": "1",
+      "openRewriteRecipeArtifactVersion": "1",
+      "reviewerNotes": "x",
+      "lastReviewedUtc": "2026-10-17",
+      "nextHumanCheck": "x"
+    },
+    {
+      "findingId": "jakarta-servlet-api",
+      "verdict": "ACTION_REQUIRED",
+      "openRewriteComparison": "PATCHED_IN_BASELINE",
+      "evidenceProves": "y",
+      "evidence": [],
+      "testedScenario": "y",
+      "openRewriteRecipe": "r",
+      "openRewritePluginVersion": "1",
+      "openRewriteRecipeArtifactVersion": "1",
+      "reviewerNotes": "y",
+      "lastReviewedUtc": "2026-10-17",
+      "nextHumanCheck": "y"
+    }
+  ]
+}

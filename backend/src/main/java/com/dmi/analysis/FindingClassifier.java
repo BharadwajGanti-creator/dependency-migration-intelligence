@@ -101,7 +101,16 @@ public class FindingClassifier {
             List<String> proposedChecks) {
 
         Finding build() {
-            return new Finding(id, category, confidence, summary, List.copyOf(sourceLocations), documentation, rationale, proposedChecks);
+            return new Finding(
+                    id,
+                    category,
+                    confidence,
+                    summary,
+                    List.copyOf(sourceLocations),
+                    documentation,
+                    rationale,
+                    proposedChecks,
+                    null);
         }
     }
 }

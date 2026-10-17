@@ -35,7 +35,7 @@
     },
     {
       "id": "pathmatch-strategy",
-      "summary": "Spring Boot 3 defaults to PathPatternParser; ant_path_matcher may indicate legacy MVC config.",
+      "summary": "Spring Boot 3 defaults to PathPatternParser; explicit ant_path_matcher remains supported but warrants review after upgrade.",
       "sourcePatterns": ["spring\\.mvc\\.pathmatch\\.matching-strategy\\s*=\\s*ant_path_matcher"],
       "documentation": [
         {

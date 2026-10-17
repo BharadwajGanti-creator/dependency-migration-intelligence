@@ -10,4 +10,5 @@ public record Finding(
         List<SourceLocation> sourceLocations,
         List<DocumentationRef> documentation,
         String rationale,
-        List<String> proposedChecks) {}
+        List<String> proposedChecks,
+        MigrationReview migrationReview) {}

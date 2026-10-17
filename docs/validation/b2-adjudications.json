@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "catalogueId": "spring-boot-2-to-3",
+  "migrationPair": {
+    "group": "org.springframework.boot",
+    "artifact": "spring-boot-starter-parent",
+    "fromVersion": "2.7.18",
+    "toVersion": "3.2.12"
+  },
+  "entries": [
+    {
+      "findingId": "jakarta-servlet-api",
+      "verdict": "ACTION_REQUIRED",
+      "openRewriteComparison": "PATCHED_IN_BASELINE",
+      "evidenceProves": "Spring Boot 3 requires Jakarta EE 9+ servlet APIs; javax.servlet types and the javax.servlet-api dependency must be migrated for a Boot 3 runtime.",
+      "evidence": [
+        {
+          "url": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide",
+          "title": "Spring Boot 3.0 Migration Guide",
+          "section": "Jakarta EE 9"
+        }
+      ],
+      "testedScenario": "OpenRewrite dryRun on isolated copy of spring-migration-case (2026-10-17) patched pom.xml dependency and LegacyServletFilter imports.",
+      "openRewriteRecipe": "org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_2",
+      "openRewritePluginVersion": "6.45.0",
+      "openRewriteRecipeArtifactVersion": "6.9.0",
+      "reviewerNotes": "Static javax.servlet import is necessary-but-not-sufficient evidence; runtime behavior was not executed in DMI API.",
+      "lastReviewedUtc": "2026-10-17",
+      "nextHumanCheck": "After applying jakarta.servlet imports, run application integration tests and servlet filter registration paths."
+    },
+    {
+      "findingId": "jakarta-annotation-postconstruct",
+      "verdict": "ACTION_REQUIRED",
+      "openRewriteComparison": "PATCHED_IN_BASELINE",
+      "evidenceProves": "javax.annotation.PostConstruct must use jakarta.annotation.PostConstruct under Boot 3 / Jakarta EE 9.",
+      "evidence": [
+        {
+          "url": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide",
+          "title": "Spring Boot 3.0 Migration Guide",
+          "section": "Jakarta EE 9"
+        }
+      ],
+      "testedScenario": "OpenRewrite dryRun patched StartupHook.java PostConstruct import on fixture copy (2026-10-17).",
+      "openRewriteRecipe": "org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_2",
+      "openRewritePluginVersion": "6.45.0",
+      "openRewriteRecipeArtifactVersion": "6.9.0",
+      "reviewerNotes": "CONFIRMED_STATIC pattern match indicates source uses javax annotation; does not alone prove lifecycle hook still required.",
+      "lastReviewedUtc": "2026-10-17",
+      "nextHumanCheck": "Verify @PostConstruct hook behavior after jakarta import and Boot 3 upgrade."
+    },
+    {
+      "findingId": "pathmatch-strategy",
+      "verdict": "REVIEW_RECOMMENDED",
+      "openRewriteComparison": "NOT_PRESENT_IN_PATCH",
+      "evidenceProves": "Explicit ant_path_matcher remains a supported Boot 3 configuration value but opts out of the PathPatternParser default; it signals legacy MVC matching worth reviewing—not automatic breakage.",
+      "evidence": [
+        {
+          "url": "https://spring.io/blog/2022/05/24/preparing-for-spring-boot-3-0",
+          "title": "Preparing for Spring Boot 3.0",
+          "section": "Use Spring MVC's PathPatternParser"
+        },
+        {
+          "url": "https://docs.spring.io/spring-boot/docs/3.2.7/api/org/springframework/boot/autoconfigure/web/servlet/WebMvcProperties.MatchingStrategy.html",
+          "title": "WebMvcProperties.MatchingStrategy (Boot 3.2.7 API)",
+          "section": "ANT_PATH_MATCHER"
+        },
+        {
+          "url": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide",
+          "title": "Spring Boot 3.0 Migration Guide",
+          "section": "Spring MVC and WebFlux URL Matching Changes"
+        }
+      ],
+      "testedScenario": "Static property line in fixture; OpenRewrite UpgradeSpringBoot_3_2 dryRun left application.properties unchanged; no Boot 3 runtime probe executed.",
+      "openRewriteRecipe": "org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_2",
+      "openRewritePluginVersion": "6.45.0",
+      "openRewriteRecipeArtifactVersion": "6.9.0",
+      "reviewerNotes": "Absence from rewrite.patch is not proof OpenRewrite missed a required fix. Runtime URL matching regressions were not reproduced in this batch.",
+      "lastReviewedUtc": "2026-10-17",
+      "nextHumanCheck": "Exercise critical MVC routes after upgrade; drop ant_path_matcher only if PathPatternParser behavior is validated."
+    },
+    {
+      "findingId": "parent-version-bump",
+      "verdict": "ACTION_REQUIRED",
+      "openRewriteComparison": "PATCHED_IN_BASELINE",
+      "evidenceProves": "Moving spring-boot-starter-parent 2.7.18→3.2.12 requires coordinated parent, Java baseline, and Jakarta migration work documented for Boot 3.2.",
+      "evidence": [
+        {
+          "url": "https://docs.spring.io/spring-boot/docs/3.2.12/reference/html/upgrading.html",
+          "title": "Spring Boot 3.2 Upgrading",
+          "section": "Upgrading from Spring Boot 2.7"
+        }
+      ],
+      "testedScenario": "OpenRewrite dryRun updated parent version and java.version on fixture copy; DMI reports POSSIBLE confidence without a source pattern.",
+      "openRewriteRecipe": "org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_2",
+      "openRewritePluginVersion": "6.45.0",
+      "openRewriteRecipeArtifactVersion": "6.9.0",
+      "reviewerNotes": "POSSIBLE static confidence must not be read as confirmed code pattern; parent bump is still required for the requested migration pair.",
+      "lastReviewedUtc": "2026-10-17",
+      "nextHumanCheck": "Align java.version to 17+, run full test suite and dependency alignment after parent upgrade."
+    }
+  ]
+}
