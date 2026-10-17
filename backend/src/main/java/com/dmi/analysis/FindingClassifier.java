@@ -9,36 +9,38 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
+import java.util.Set;
 
 @Component
 public class FindingClassifier {
 
-    public List<Finding> classify(List<AdvisoryCatalogue.CatalogueEntry> entries, List<SourceEvidenceScanner.ScanMatch> scanMatches) {
+    public List<Finding> classify(List<AdvisoryCatalogue.CatalogueEntry> entries, ScanResult scanResult) {
         Map<String, FindingBuilder> builders = new LinkedHashMap<>();
+        boolean partial = scanResult.completeness() == ScanCompleteness.PARTIAL;
+
         for (AdvisoryCatalogue.CatalogueEntry entry : entries) {
-            List<SourceLocation> locations = new ArrayList<>();
+            Set<SourceLocation> locations = new HashSet<>();
             for (String patternStr : entry.sourcePatterns()) {
                 if (patternStr.isBlank()) {
                     continue;
                 }
-                Pattern pattern = Pattern.compile(patternStr);
-                for (SourceEvidenceScanner.ScanMatch match : scanMatches) {
-                    if (pattern.matcher(match.excerpt()).find() || Pattern.compile(patternStr).matcher(match.excerpt()).find()) {
+                for (SourceEvidenceScanner.ScanMatch match : scanResult.matches()) {
+                    if (patternStr.equals(match.patternKey())) {
                         locations.add(new SourceLocation(match.relativePath(), match.line()));
                     }
                 }
             }
-            locations = locations.stream().distinct()
+            List<SourceLocation> sortedLocations = locations.stream()
                     .sorted(Comparator.comparing(SourceLocation::path).thenComparingInt(SourceLocation::line))
                     .toList();
 
             Confidence confidence;
             String rationale;
-            if (!locations.isEmpty()) {
+            if (!sortedLocations.isEmpty()) {
                 confidence = Confidence.CONFIRMED_STATIC;
                 rationale = "Static pattern match in fixture source with curated documentation linkage.";
             } else if (entry.sourcePatterns().isEmpty()) {
@@ -46,7 +48,9 @@ public class FindingClassifier {
                 rationale = "Documentation-only guidance for the requested upgrade; no static signal configured.";
             } else {
                 confidence = Confidence.NOT_ASSESSED;
-                rationale = "Catalogue rule exists but no matching source evidence in bounded scan.";
+                rationale = partial
+                        ? "Catalogue rule exists but scan was PARTIAL; absence of match is not evidence of compatibility."
+                        : "Catalogue rule exists but no matching source evidence in bounded scan.";
             }
 
             List<DocumentationRef> docs = entry.documentation().stream()
@@ -58,7 +62,7 @@ public class FindingClassifier {
                     "MIGRATION_SIGNAL",
                     confidence,
                     entry.summary(),
-                    new ArrayList<>(locations),
+                    new ArrayList<>(sortedLocations),
                     docs,
                     rationale,
                     new ArrayList<>(entry.proposedChecks())));

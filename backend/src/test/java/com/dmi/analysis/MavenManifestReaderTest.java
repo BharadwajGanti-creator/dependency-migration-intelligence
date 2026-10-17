@@ -13,8 +13,8 @@ class MavenManifestReaderTest {
     @Test
     void readsParentFromFixture() {
         Path fixture = Path.of("../fixtures/spring-migration-case").toAbsolutePath().normalize();
-        var manifest = reader.read(fixture);
-        assertThat(manifest.parent().artifactId()).isEqualTo("spring-boot-starter-parent");
-        assertThat(manifest.parent().version()).isEqualTo("2.7.18");
+        var result = reader.read(fixture);
+        assertThat(result.manifest().parent().artifactId()).isEqualTo("spring-boot-starter-parent");
+        assertThat(result.manifest().parent().resolvedVersion()).isEqualTo("2.7.18");
     }
 }

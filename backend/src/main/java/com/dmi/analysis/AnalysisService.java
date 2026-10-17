@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Service
@@ -57,7 +59,8 @@ public class AnalysisService {
 
         Path fixtureRoot = fixtureRegistry.resolveFixtureRoot(request.fixtureId());
         String digest = fixtureRegistry.digest(fixtureRoot);
-        MavenManifestReader.MavenManifest manifest = mavenManifestReader.read(fixtureRoot);
+        MavenManifestReader.ManifestReadResult manifestResult = mavenManifestReader.read(fixtureRoot);
+        MavenManifestReader.MavenManifest manifest = manifestResult.manifest();
 
         var declaredParent = mavenManifestReader.resolveParent(
                 manifest, request.dependencyGroup(), request.dependencyArtifact());
@@ -76,19 +79,27 @@ public class AnalysisService {
         }
         DependencyCoordinate after = new DependencyCoordinate(before.group(), before.artifact(), request.toVersion());
 
-        List<Pattern> patterns = new ArrayList<>();
-        advisoryCatalogue.entries().forEach(e -> e.sourcePatterns().forEach(p -> {
-            if (!p.isBlank()) {
-                patterns.add(Pattern.compile(p));
-            }
-        }));
-        List<SourceEvidenceScanner.ScanMatch> matches = sourceEvidenceScanner.scan(fixtureRoot, patterns);
-        List<Finding> findings = findingClassifier.classify(advisoryCatalogue.entries(), matches);
+        List<PatternDescriptor> patternDescriptors = buildPatternDescriptors();
+        ScanResult scanResult = sourceEvidenceScanner.scan(fixtureRoot, patternDescriptors);
+        List<Finding> findings = findingClassifier.classify(advisoryCatalogue.entries(), scanResult);
 
         List<String> limitations = new ArrayList<>(ReportComposer.defaultLimitations());
+        manifestResult.diagnostics().forEach(d -> limitations.add("Manifest: " + d.code() + " — " + d.message()));
+        manifest.dependencies().stream()
+                .filter(d -> d.version().resolution() == VersionResolution.UNRESOLVED_PROPERTY)
+                .forEach(d -> limitations.add("Manifest: unresolved property for " + d.groupId() + ":" + d.artifactId()));
+        manifest.dependencies().stream()
+                .filter(d -> d.version().resolution() == VersionResolution.MANAGED_OR_UNKNOWN)
+                .forEach(d -> limitations.add("Manifest: direct dependency " + d.groupId() + ":" + d.artifactId() + " has no declared version (managed or unknown effective version)."));
+        if (scanResult.completeness() == ScanCompleteness.PARTIAL) {
+            limitations.add("Source scan completeness: PARTIAL — not all eligible files were fully scanned.");
+            scanResult.diagnostics().stream()
+                    .map(d -> "Scan: " + d.code() + (d.detail().isBlank() ? "" : " (" + d.detail() + ")"))
+                    .distinct()
+                    .forEach(limitations::add);
+        }
         if (manifest.dependencies().stream()
-                .filter(d -> d.groupId().equals("javax.servlet") && d.artifactId().equals("javax.servlet-api"))
-                .count() > 0) {
+                .anyMatch(d -> "javax.servlet".equals(d.groupId()) && "javax.servlet-api".equals(d.artifactId()))) {
             limitations.add("Fixture declares javax.servlet-api; remove or replace when moving to Jakarta.");
         }
 
@@ -99,5 +110,19 @@ public class AnalysisService {
                 findings.size(),
                 MDC.get("traceId"));
         return report;
+    }
+
+    private List<PatternDescriptor> buildPatternDescriptors() {
+        Map<String, PatternDescriptor> byKey = new LinkedHashMap<>();
+        int nextIndex = 0;
+        for (var entry : advisoryCatalogue.entries()) {
+            for (String pattern : entry.sourcePatterns()) {
+                if (pattern.isBlank() || byKey.containsKey(pattern)) {
+                    continue;
+                }
+                byKey.put(pattern, new PatternDescriptor(nextIndex++, pattern, Pattern.compile(pattern)));
+            }
+        }
+        return new ArrayList<>(byKey.values());
     }
 }
