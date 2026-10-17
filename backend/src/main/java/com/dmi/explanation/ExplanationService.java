@@ -87,7 +87,7 @@ public class ExplanationService {
                         generated.claims(),
                         metadata);
             }
-            return DeterministicFallbackBuilder.fallback(
+            return DeterministicFallbackBuilder.rejected(
                     finding,
                     pack,
                     "Explanation rejected by verifier: " + String.join("; ", verifierResult.violations()));

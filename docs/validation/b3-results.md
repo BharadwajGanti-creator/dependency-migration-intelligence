@@ -2,16 +2,26 @@
 
 **Branch:** `cursor/dmi-b3-grounded-explanations`  
 **Base:** `main` @ `c997eae`  
-**Batch date:** 2026-10-17
+**Batch date:** 2026-10-17  
+**PR review follow-up:** verifier fail-closed URLs, `REJECTED` status, `findingIds` validation, negative tests (same PR #3).
 
 ## A1 — Default disabled (VERIFIED)
 
 | Command | Result |
 |---------|--------|
-| `cd backend && ./mvnw verify` | PASS — **46** tests, 0 failures |
+| `cd backend && ./mvnw verify` | PASS — **51** tests, 0 failures |
 | `cd frontend && npm ci && npm run build` | PASS |
 
-With default properties, `POST /api/v1/analyses/explanations` returns `DISABLED` explanations while preserving full sync-equivalent `report`.
+With default properties, `POST /api/v1/analyses/explanations` returns `DISABLED` explanations while preserving full sync-equivalent `report`. Integration test asserts embedded `report.findings` equals sync response findings JSON.
+
+## PR review fixes (VERIFIED)
+
+| Finding | Fix |
+|---------|-----|
+| Verifier fail-open on unknown URLs | `urlAllowed` returns false when URL not in pack docs |
+| Verifier failures surfaced as `FALLBACK` only | Invalid model output → `REJECTED` + retained `deterministicReview` |
+| `findingIds` not validated | `RequestValidator.validateFindingIds` (format, traversal, duplicates) |
+| Negative/security coverage gaps | `ExplanationVerifierSecurityTest`, invalid-output integration test, unsafe/duplicate id API tests |
 
 ## A2 — Sanitized evidence packs (VERIFIED)
 
@@ -29,9 +39,9 @@ Labelled corpus: `backend/src/test/resources/validation/b3-labelled-cases.json` 
 
 Citations required per claim; semantic support is **not** fully proven — narrow structural checks only.
 
-## A4 — Fallback (VERIFIED)
+## A4 — Fallback / reject (VERIFIED)
 
-Disabled provider, verifier rejection, and timeout path retain original findings via embedded `report` + `deterministicReview`.
+Disabled provider and timeout retain original findings via embedded `report` + `deterministicReview`. Verifier rejection returns **`REJECTED`** (deterministic B2 text in summary/claims) without mutating report findings.
 
 ## A5 — Security / regression (VERIFIED)
 
@@ -55,10 +65,27 @@ Latency/cost/usefulness: **NOT MEASURED**.
 
 Default config disables explanations; no hosted model endpoint enabled.
 
+## Manual smoke (VERIFIED 2026-10-17)
+
+```bash
+cd backend && DMI_FIXTURES_ROOT=/workspace/fixtures ./mvnw spring-boot:run
+# separate terminal:
+curl -s -X POST http://127.0.0.1:8787/api/v1/analyses/explanations \
+  -H 'Content-Type: application/json' \
+  -d '{"analysis":{"fixtureId":"spring-migration-case","dependencyGroup":"org.springframework.boot","dependencyArtifact":"spring-boot-starter-parent","fromVersion":"2.7.18","toVersion":"3.2.12"},"findingIds":["pathmatch-strategy"]}' \
+  | jq '.explanations[0].status,.explanations[0].deterministicReview.verdict'
+# Observed: "DISABLED", "REVIEW_RECOMMENDED"
+```
+
+UI: `cd frontend && npm run dev` — run sync analysis, click **Request explanation** on a finding; panel shows **AI explanations disabled** with B2 review text visible above.
+
 ## Unresolved / UNVERIFIED
 
 - Real-model usefulness vs deterministic B2 (experiment not executed).
-- End-user manual UI smoke (build-only); component maps all status labels.
+
+## Merge readiness (agent)
+
+CI green after fixes; diff limited to review items above. **Recommend human merge** of PR #3 after reviewer confirms — agent did not merge.
 
 ## Decision note
 

@@ -147,7 +147,7 @@ public class ExplanationVerifier {
                 return true;
             }
         }
-        return allowed.isEmpty();
+        return false;
     }
 
     public record VerifierResult(boolean accepted, List<String> violations) {}

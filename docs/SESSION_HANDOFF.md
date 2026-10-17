@@ -9,7 +9,7 @@
 - **Sync API:** `POST /api/v1/analyses/sync` — unchanged; findings include optional B2 `migrationReview`.
 - **Explanations API:** `POST /api/v1/analyses/explanations` — opt-in; server recomputes report; default **disabled** (`dmi.explanation.enabled=false`).
 - **Trust:** static `confidence` vs reviewed `verdict` vs optional AI status (`DISABLED`, `FALLBACK`, `ACCEPTED`, …). Pathmatch stays `REVIEW_RECOMMENDED` / `NOT_PRESENT_IN_PATCH`.
-- **Tests:** `cd backend && ./mvnw verify` (**46** tests)
+- **Tests:** `cd backend && ./mvnw verify` (**51** tests)
 - **UI:** sync report + optional “Request explanation” per finding (shows disabled/fallback/accepted states separately from B2 facts).
 
 ## Run locally

@@ -23,7 +23,7 @@
 |-------|-------------|
 | `findingId` | Catalogue id |
 | `evidencePackId` | Stable hash id for server-built pack |
-| `status` | `ACCEPTED`, `REJECTED`, `DISABLED`, `FALLBACK`, `TIMEOUT` |
+| `status` | `ACCEPTED`, `REJECTED` (verifier failed; B2 review retained), `DISABLED`, `FALLBACK`, `TIMEOUT` |
 | `summary` | Human-readable explanation or deterministic fallback banner |
 | `claims` | `{ text, evidenceIds[] }` — evidenceIds must reference server pack items |
 | `nextChecks` | Suggested follow-ups |
@@ -37,4 +37,7 @@ With `dmi.explanation.enabled=false`, every explanation returns `status=DISABLED
 
 ## Errors
 
-Same validation as sync for `analysis`, plus `422 UNKNOWN_FINDING` when a requested id is absent from the recomputed report.
+Same validation as sync for `analysis`, plus:
+
+- `400 UNSAFE_INPUT` / `INVALID_FINDING_ID` / `DUPLICATE_FINDING_ID` for malformed `findingIds`
+- `422 UNKNOWN_FINDING` when a requested id is absent from the recomputed report

@@ -21,6 +21,10 @@ public final class DeterministicFallbackBuilder {
         return build(finding, pack, ExplanationStatus.FALLBACK, reason);
     }
 
+    public static FindingExplanation rejected(Finding finding, EvidencePack pack, String reason) {
+        return build(finding, pack, ExplanationStatus.REJECTED, reason);
+    }
+
     public static FindingExplanation acceptedFromVerified(
             Finding finding,
             EvidencePack pack,

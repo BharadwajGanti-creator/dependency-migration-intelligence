@@ -25,6 +25,7 @@ public class ExplanationController {
     @PostMapping("/explanations")
     public ResponseEntity<ExplanationsResponse> explain(@Valid @RequestBody ExplanationRequest request) {
         requestValidator.validate(request.analysis());
+        requestValidator.validateFindingIds(request.findingIds());
         return ResponseEntity.ok(explanationService.explain(request));
     }
 }
