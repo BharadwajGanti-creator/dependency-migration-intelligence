@@ -18,7 +18,7 @@
     },
     {
       "path": "src/main/java/com/example/demo/config/StartupHook.java",
-      "line": 5
+      "line": 3
     },
     {
       "path": "src/main/resources/application.properties",

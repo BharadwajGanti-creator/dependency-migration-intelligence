@@ -65,6 +65,15 @@ class AnalysisControllerIntegrationTest {
     }
 
     @Test
+    void unsupportedMigrationReturns422() throws Exception {
+        mockMvc.perform(post("/api/v1/analyses/sync")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY.replace("\"toVersion\": \"3.2.12\"", "\"toVersion\": \"9.9.9\"")))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_MIGRATION"));
+    }
+
+    @Test
     void traversalInFixtureIdReturns400() throws Exception {
         mockMvc.perform(post("/api/v1/analyses/sync")
                         .contentType(MediaType.APPLICATION_JSON)
