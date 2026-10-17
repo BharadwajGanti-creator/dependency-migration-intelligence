@@ -1,6 +1,6 @@
 # B2 validation results — product value & explainable evidence
 
-**Branch:** `feat/dmi-b2-value-validation`  
+**Branch:** `cursor/dmi-b2-value-validation-f989`  
 **Base:** `main` @ `f39d7d9` (includes B2 planning docs)  
 **Batch date:** 2026-10-17
 

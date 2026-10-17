@@ -3,7 +3,7 @@
 **Branch:** `feat/dmi-evidence-integrity` (merged to `main` via PR #1 @ `82a2737`)  
 **Baseline main at branch point:** `c48f6e8`  
 **Spec:** `docs/next-batch/02_DMI_Implementation_Batch_Spec.md`  
-**Follow-on:** B2 adjudication work on `feat/dmi-b2-value-validation`; see `docs/validation/b2-results.md`.
+**Follow-on:** B2 adjudication work on `cursor/dmi-b2-value-validation-f989`; see `docs/validation/b2-results.md`.
 
 ## Commands executed (latest)
 

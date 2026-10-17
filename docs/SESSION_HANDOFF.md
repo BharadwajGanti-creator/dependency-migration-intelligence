@@ -1,6 +1,6 @@
 # DMI session handoff
 
-**Last batch:** B2 product value validation on `feat/dmi-b2-value-validation`  
+**Last batch:** B2 product value validation on `cursor/dmi-b2-value-validation-f989`  
 **Main reference:** `f39d7d9` (B2 specs) + B1 merge `82a2737`  
 **Verification:** `docs/validation/b2-results.md`
 
@@ -30,7 +30,7 @@ P6 hosting, P7 LLM, auth, PostgreSQL, new fixtures/migrations, Gradle, arbitrary
 ## Fresh-chat prompt
 
 ```
-Continue DMI on main or feat/dmi-b2-value-validation after B2 PR merge. Read docs/SESSION_HANDOFF.md and docs/validation/b2-results.md. Next bounded task per user — no scope expansion.
+Continue DMI on main or cursor/dmi-b2-value-validation-f989 after B2 PR merge. Read docs/SESSION_HANDOFF.md and docs/validation/b2-results.md. Next bounded task per user — no scope expansion.
 ```
 
 ## Key paths
