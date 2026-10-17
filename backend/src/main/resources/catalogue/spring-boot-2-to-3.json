@@ -1,0 +1,68 @@
+{
+  "catalogueId": "spring-boot-2-to-3",
+  "lastReviewedUtc": "2026-10-01",
+  "entries": [
+    {
+      "id": "jakarta-servlet-api",
+      "summary": "Spring Boot 3 runs on Jakarta EE 9+; javax.servlet types must migrate to jakarta.servlet.",
+      "sourcePatterns": ["javax\\.servlet"],
+      "documentation": [
+        {
+          "url": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide",
+          "title": "Spring Boot 3.0 Migration Guide",
+          "section": "Jakarta EE 9"
+        }
+      ],
+      "proposedChecks": [
+        "Replace javax.servlet imports with jakarta.servlet equivalents",
+        "Remove explicit javax.servlet-api dependency if present"
+      ]
+    },
+    {
+      "id": "jakarta-annotation-postconstruct",
+      "summary": "javax.annotation.PostConstruct moved to jakarta.annotation.PostConstruct in Boot 3.",
+      "sourcePatterns": ["javax\\.annotation\\.PostConstruct", "import javax\\.annotation"],
+      "documentation": [
+        {
+          "url": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide",
+          "title": "Spring Boot 3.0 Migration Guide",
+          "section": "Jakarta EE 9"
+        }
+      ],
+      "proposedChecks": [
+        "Update PostConstruct import to jakarta.annotation.PostConstruct"
+      ]
+    },
+    {
+      "id": "pathmatch-strategy",
+      "summary": "Spring Boot 3 defaults to PathPatternParser; ant_path_matcher may indicate legacy MVC config.",
+      "sourcePatterns": ["spring\\.mvc\\.pathmatch\\.matching-strategy\\s*=\\s*ant_path_matcher"],
+      "documentation": [
+        {
+          "url": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide",
+          "title": "Spring Boot 3.0 Migration Guide",
+          "section": "Spring MVC and WebFlux"
+        }
+      ],
+      "proposedChecks": [
+        "Review whether ant_path_matcher is still required after upgrade"
+      ]
+    },
+    {
+      "id": "parent-version-bump",
+      "summary": "Upgrading spring-boot-starter-parent from 2.7.x to 3.2.x requires Java 17+ and Jakarta migration across the codebase.",
+      "sourcePatterns": [],
+      "documentation": [
+        {
+          "url": "https://docs.spring.io/spring-boot/docs/3.2.12/reference/html/upgrading.html",
+          "title": "Spring Boot 3.2 Upgrading",
+          "section": "Upgrading from Spring Boot 2.7"
+        }
+      ],
+      "proposedChecks": [
+        "Set java.version to 17 or higher in pom.xml",
+        "Run OpenRewrite spring boot 3 migration recipe in dry-run mode"
+      ]
+    }
+  ]
+}

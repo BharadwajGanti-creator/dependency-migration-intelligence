@@ -1,0 +1,28 @@
+{
+  "fixtureId": "spring-migration-case",
+  "dependency": {
+    "group": "org.springframework.boot",
+    "artifact": "spring-boot-starter-parent",
+    "fromVersion": "2.7.18",
+    "toVersion": "3.2.12"
+  },
+  "minimumFindingIds": [
+    "jakarta-servlet-api",
+    "jakarta-annotation-postconstruct",
+    "pathmatch-strategy"
+  ],
+  "expectedSourceLocations": [
+    {
+      "path": "src/main/java/com/example/demo/web/LegacyServletFilter.java",
+      "line": 3
+    },
+    {
+      "path": "src/main/java/com/example/demo/config/StartupHook.java",
+      "line": 5
+    },
+    {
+      "path": "src/main/resources/application.properties",
+      "line": 2
+    }
+  ]
+}
