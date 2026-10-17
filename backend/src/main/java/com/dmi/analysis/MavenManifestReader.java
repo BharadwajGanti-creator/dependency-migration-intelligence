@@ -14,12 +14,13 @@ import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,18 +28,29 @@ import java.util.Optional;
 @Component
 public class MavenManifestReader {
 
-    public MavenManifest read(Path fixtureRoot) {
+    public static final int MAX_POM_BYTES = 512 * 1024;
+
+    public ManifestReadResult read(Path fixtureRoot) {
         Path pom = fixtureRoot.resolve("pom.xml");
         if (!Files.isRegularFile(pom)) {
             throw new AnalysisException(HttpStatus.UNPROCESSABLE_ENTITY, "MISSING_POM", "pom.xml not found in fixture");
         }
-        try (InputStream in = Files.newInputStream(pom)) {
-            Document doc = parseSecure(in);
+        try {
+            long size = Files.size(pom);
+            if (size > MAX_POM_BYTES) {
+                throw new AnalysisException(HttpStatus.UNPROCESSABLE_ENTITY, "POM_TOO_LARGE", "pom.xml exceeds size limit");
+            }
+            byte[] bytes = Files.readAllBytes(pom);
+            Document doc = parseSecure(bytes);
             Element root = doc.getDocumentElement();
-            Map<String, String> properties = readProperties(root);
-            ParentInfo parent = readParent(root, properties);
-            List<DeclaredDependency> dependencies = readDependencies(root, properties);
-            return new MavenManifest(parent, dependencies, properties);
+            if (root == null || !"project".equals(root.getNodeName())) {
+                throw new AnalysisException(HttpStatus.UNPROCESSABLE_ENTITY, "MALFORMED_POM", "Missing project root element");
+            }
+            List<ManifestDiagnostic> diagnostics = new ArrayList<>();
+            Map<String, String> properties = readProperties(root, diagnostics);
+            ParentInfo parent = readParent(root, properties, diagnostics);
+            List<DeclaredDependency> dependencies = readDirectDependencies(root, properties, diagnostics);
+            return new ManifestReadResult(new MavenManifest(parent, dependencies, properties), diagnostics);
         } catch (IOException | SAXException e) {
             throw new AnalysisException(HttpStatus.UNPROCESSABLE_ENTITY, "MALFORMED_POM", "Could not parse pom.xml");
         }
@@ -52,32 +64,38 @@ public class MavenManifestReader {
         if (!parent.groupId().equals(group) || !parent.artifactId().equals(artifact)) {
             return Optional.empty();
         }
-        return Optional.of(new DependencyCoordinate(parent.groupId(), parent.artifactId(), parent.version()));
+        return Optional.of(new DependencyCoordinate(parent.groupId(), parent.artifactId(), parent.resolvedVersion()));
     }
 
-    private Document parseSecure(InputStream in) throws SAXException, IOException {
+    private Document parseSecure(byte[] bytes) throws SAXException, IOException {
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
             factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
             factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+            factory.setXIncludeAware(false);
             factory.setExpandEntityReferences(false);
             factory.setNamespaceAware(false);
             DocumentBuilder builder = factory.newDocumentBuilder();
-            return builder.parse(in);
+            return builder.parse(new ByteArrayInputStream(bytes));
         } catch (ParserConfigurationException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    private Map<String, String> readProperties(Element root) {
+    private Map<String, String> readProperties(Element root, List<ManifestDiagnostic> diagnostics) {
         Map<String, String> props = new HashMap<>();
-        NodeList propsNodes = root.getElementsByTagName("properties");
-        if (propsNodes.getLength() == 0) {
+        int count = countDirectChildElements(root, "properties");
+        if (count > 1) {
+            diagnostics.add(new ManifestDiagnostic("DUPLICATE_ROOT_PROPERTIES", "Multiple project/properties elements"));
+        }
+        Element propsEl = directChildElement(root, "properties");
+        if (propsEl == null) {
             return props;
         }
-        Element propsEl = (Element) propsNodes.item(0);
         NodeList children = propsEl.getChildNodes();
         for (int i = 0; i < children.getLength(); i++) {
             Node node = children.item(i);
@@ -88,56 +106,133 @@ public class MavenManifestReader {
         return props;
     }
 
-    private ParentInfo readParent(Element root, Map<String, String> properties) {
-        NodeList parents = root.getElementsByTagName("parent");
-        if (parents.getLength() == 0) {
+    private ParentInfo readParent(Element root, Map<String, String> properties, List<ManifestDiagnostic> diagnostics) {
+        int count = countDirectChildElements(root, "parent");
+        if (count > 1) {
+            diagnostics.add(new ManifestDiagnostic("DUPLICATE_ROOT_PARENT", "Multiple project/parent elements"));
+        }
+        Element parentEl = directChildElement(root, "parent");
+        if (parentEl == null) {
             return null;
         }
-        Element parent = (Element) parents.item(0);
-        String group = text(parent, "groupId");
-        String artifact = text(parent, "artifactId");
-        String version = resolveProperty(text(parent, "version"), properties);
-        return new ParentInfo(group, artifact, version);
+        String group = directChildText(parentEl, "groupId");
+        String artifact = directChildText(parentEl, "artifactId");
+        String versionRaw = directChildText(parentEl, "version");
+        ResolvedVersion version = resolveProperty(versionRaw, properties);
+        if (group.isBlank() || artifact.isBlank()) {
+            diagnostics.add(new ManifestDiagnostic("INCOMPLETE_PARENT", "Parent coordinates missing groupId or artifactId"));
+        }
+        return new ParentInfo(group, artifact, versionRaw, version);
     }
 
-    private List<DeclaredDependency> readDependencies(Element root, Map<String, String> properties) {
+    private List<DeclaredDependency> readDirectDependencies(Element root, Map<String, String> properties, List<ManifestDiagnostic> diagnostics) {
+        int depsBlocks = countDirectChildElements(root, "dependencies");
+        if (depsBlocks > 1) {
+            diagnostics.add(new ManifestDiagnostic("DUPLICATE_ROOT_DEPENDENCIES", "Multiple project/dependencies blocks"));
+        }
+        Element depsEl = directChildElement(root, "dependencies");
         List<DeclaredDependency> deps = new ArrayList<>();
-        NodeList depNodes = root.getElementsByTagName("dependency");
-        for (int i = 0; i < depNodes.getLength(); i++) {
-            Element dep = (Element) depNodes.item(i);
-            if (!dep.getParentNode().getNodeName().equals("dependencies")) {
+        if (depsEl == null) {
+            return deps;
+        }
+        Map<String, Integer> seen = new LinkedHashMap<>();
+        NodeList children = depsEl.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node node = children.item(i);
+            if (node.getNodeType() != Node.ELEMENT_NODE || !"dependency".equals(node.getNodeName())) {
                 continue;
             }
-            String group = text(dep, "groupId");
-            String artifact = text(dep, "artifactId");
-            String version = resolveProperty(text(dep, "version"), properties);
-            deps.add(new DeclaredDependency(group, artifact, version));
+            Element dep = (Element) node;
+            String group = directChildText(dep, "groupId");
+            String artifact = directChildText(dep, "artifactId");
+            String versionRaw = directChildText(dep, "version");
+            ResolvedVersion version = resolveProperty(versionRaw, properties);
+            if (group.isBlank() || artifact.isBlank()) {
+                diagnostics.add(new ManifestDiagnostic("INCOMPLETE_DEPENDENCY", "Direct dependency missing groupId or artifactId"));
+                continue;
+            }
+            String key = group + ":" + artifact;
+            seen.merge(key, 1, Integer::sum);
+            deps.add(new DeclaredDependency(group, artifact, versionRaw, version));
         }
+        seen.forEach((k, n) -> {
+            if (n > 1) {
+                diagnostics.add(new ManifestDiagnostic("DUPLICATE_DIRECT_DEPENDENCY", k + " declared " + n + " times"));
+            }
+        });
         return deps;
     }
 
-    private String text(Element parent, String tag) {
-        NodeList nodes = parent.getElementsByTagName(tag);
-        if (nodes.getLength() == 0) {
+    private ResolvedVersion resolveProperty(String raw, Map<String, String> properties) {
+        if (raw == null || raw.isBlank()) {
+            return new ResolvedVersion("", VersionResolution.MANAGED_OR_UNKNOWN);
+        }
+        if (!raw.startsWith("${") || !raw.endsWith("}")) {
+            return new ResolvedVersion(raw, VersionResolution.LITERAL);
+        }
+        String key = raw.substring(2, raw.length() - 1);
+        if (!properties.containsKey(key)) {
+            return new ResolvedVersion(raw, VersionResolution.UNRESOLVED_PROPERTY);
+        }
+        String value = properties.get(key);
+        if (value.startsWith("${") && value.endsWith("}")) {
+            return new ResolvedVersion(raw, VersionResolution.UNRESOLVED_PROPERTY);
+        }
+        return new ResolvedVersion(value, VersionResolution.RESOLVED_FROM_PROPERTY);
+    }
+
+    private Element directChildElement(Element parent, String name) {
+        NodeList children = parent.getChildNodes();
+        Element found = null;
+        for (int i = 0; i < children.getLength(); i++) {
+            Node node = children.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE && name.equals(node.getNodeName())) {
+                if (found != null) {
+                    return found;
+                }
+                found = (Element) node;
+            }
+        }
+        return found;
+    }
+
+    private int countDirectChildElements(Element parent, String name) {
+        int count = 0;
+        NodeList children = parent.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node node = children.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE && name.equals(node.getNodeName())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private String directChildText(Element parent, String name) {
+        Element child = directChildElement(parent, name);
+        if (child == null) {
             return "";
         }
-        return nodes.item(0).getTextContent().trim();
+        return child.getTextContent().trim();
     }
 
-    private String resolveProperty(String raw, Map<String, String> properties) {
-        if (raw == null || raw.isBlank()) {
-            return raw;
+    public record ResolvedVersion(String display, VersionResolution resolution) {}
+
+    public record ParentInfo(String groupId, String artifactId, String versionRaw, ResolvedVersion version) {
+        public String resolvedVersion() {
+            return version.display().isBlank() && version.resolution() == VersionResolution.MANAGED_OR_UNKNOWN
+                    ? versionRaw
+                    : version.display();
         }
-        if (raw.startsWith("${") && raw.endsWith("}")) {
-            String key = raw.substring(2, raw.length() - 1);
-            return properties.getOrDefault(key, raw);
-        }
-        return raw;
     }
 
-    public record ParentInfo(String groupId, String artifactId, String version) {}
-
-    public record DeclaredDependency(String groupId, String artifactId, String version) {}
+    public record DeclaredDependency(
+            String groupId,
+            String artifactId,
+            String versionRaw,
+            ResolvedVersion version) {}
 
     public record MavenManifest(ParentInfo parent, List<DeclaredDependency> dependencies, Map<String, String> properties) {}
+
+    public record ManifestReadResult(MavenManifest manifest, List<ManifestDiagnostic> diagnostics) {}
 }
