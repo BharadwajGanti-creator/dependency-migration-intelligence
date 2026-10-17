@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.stream.Stream;
 import java.util.function.Predicate;
 
 public final class FixtureBounds {
@@ -69,9 +70,19 @@ public final class FixtureBounds {
                             early[0] = new DepthProbeResult(DepthProbeStatus.METADATA_BUDGET_EXCEEDED, "directory-entry-budget");
                             return FileVisitResult.TERMINATE;
                         }
-                        if (relativeDepth(root, dir) >= limits.maxVisitDepth()) {
-                            early[0] = new DepthProbeResult(DepthProbeStatus.METADATA_BUDGET_EXCEEDED, "visit-depth-cap");
-                            return FileVisitResult.SKIP_SUBTREE;
+                        int depth = relativeDepth(root, dir);
+                        if (depth == limits.maxVisitDepth()) {
+                            try {
+                                if (hasNonSymlinkSubdirectory(dir)) {
+                                    early[0] = new DepthProbeResult(
+                                            DepthProbeStatus.METADATA_BUDGET_EXCEEDED, "visit-depth-cap");
+                                    return FileVisitResult.TERMINATE;
+                                }
+                            } catch (IOException e) {
+                                early[0] = new DepthProbeResult(
+                                        DepthProbeStatus.METADATA_BUDGET_EXCEEDED, "visit-depth-list-failed");
+                                return FileVisitResult.TERMINATE;
+                            }
                         }
                         return FileVisitResult.CONTINUE;
                     }
@@ -108,7 +119,25 @@ public final class FixtureBounds {
         if (early[0] != null) {
             return early[0];
         }
+        if (hasDirectoryBeyondVisitDepth(root, limits.maxVisitDepth())) {
+            return new DepthProbeResult(DepthProbeStatus.METADATA_BUDGET_EXCEEDED, "visit-depth-cap");
+        }
         return new DepthProbeResult(DepthProbeStatus.CLEAR, "");
+    }
+
+    /** Bounded one-level-beyond check; fail closed if deeper directories exist. */
+    private static boolean hasDirectoryBeyondVisitDepth(Path root, int maxVisitDepth) throws IOException {
+        try (Stream<Path> paths = Files.walk(root, maxVisitDepth + 1)) {
+            return paths.filter(Files::isDirectory)
+                    .filter(p -> !Files.isSymbolicLink(p))
+                    .anyMatch(p -> relativeDepth(root, p) > maxVisitDepth);
+        }
+    }
+
+    private static boolean hasNonSymlinkSubdirectory(Path dir) throws IOException {
+        try (Stream<Path> children = Files.list(dir)) {
+            return children.anyMatch(p -> Files.isDirectory(p) && !Files.isSymbolicLink(p));
+        }
     }
 
     private static boolean budgetExhausted(int entries, long startedNanos, ProbeLimits limits) {
