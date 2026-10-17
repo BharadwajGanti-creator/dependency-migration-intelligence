@@ -88,12 +88,14 @@ class ControlledCorpusRegressionTest {
     }
 
     @Test
-    void corpusTaxonomyLabelsAreDocumented() {
+    void manifestOutcomeDenominatorsMatchB4ValidationDoc() {
         JsonNode manifest = ControlledCorpusSupport.loadManifest();
-        long labelled = StreamSupport.stream(manifest.get("scenarios").spliterator(), false)
+        var outcomes = StreamSupport.stream(manifest.get("scenarios").spliterator(), false)
                 .flatMap(s -> StreamSupport.stream(s.get("expectedOutcomes").spliterator(), false))
-                .filter(o -> o.has("taxonomy"))
-                .count();
-        assertThat(labelled).isGreaterThanOrEqualTo(8);
+                .toList();
+        assertThat(outcomes).hasSize(10);
+        assertThat(outcomes.stream().filter(o -> o.has("taxonomy")).count()).isEqualTo(10);
+        assertThat(outcomes.stream().filter(o -> o.has("mustNotBeConfidence")).count()).isEqualTo(5);
+        assertThat(outcomes.stream().filter(o -> o.has("mustNotBeVerdict")).count()).isEqualTo(1);
     }
 }

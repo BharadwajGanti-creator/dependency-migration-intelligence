@@ -23,15 +23,19 @@ Full manifest: `docs/validation/b4-corpus-manifest.json`
 
 ## Expected vs observed (deterministic pipeline)
 
-Denominator: **4 corpus scenarios**, **11 labelled outcome assertions** in regression tests (`ControlledCorpusRegressionTest`).
+Denominator: **4 corpus scenarios**, **10 manifest `expectedOutcomes` rows** (each executed once per scenario in `ControlledCorpusRegressionTest.corpusScenariosMatchManifestExpectations`).
 
 | Scenario | Finding | Expected | Observed | Taxonomy |
 |----------|---------|----------|----------|----------|
 | jakarta-servlet-tp | jakarta-servlet-api | CONFIRMED_STATIC + ACTION_REQUIRED | Match | true_positive |
 | jakarta-servlet-tp | jakarta-annotation-postconstruct | NOT_ASSESSED | Match | true_negative_absence |
+| jakarta-servlet-tp | pathmatch-strategy | NOT_ASSESSED | Match | true_negative_absence |
 | no-static-signals | jakarta-servlet-api | NOT_ASSESSED, not CONFIRMED_STATIC | Match | true_negative |
+| no-static-signals | jakarta-annotation-postconstruct | NOT_ASSESSED, not CONFIRMED_STATIC | Match | true_negative |
+| no-static-signals | pathmatch-strategy | NOT_ASSESSED, not CONFIRMED_STATIC | Match | true_negative |
 | no-static-signals | parent-version-bump | POSSIBLE + ACTION_REQUIRED | Match | informational_doc_only |
 | pathmatch-review | pathmatch-strategy | CONFIRMED_STATIC + REVIEW_RECOMMENDED (not ACTION_REQUIRED) | Match | informational_review |
+| pathmatch-review | jakarta-servlet-api | NOT_ASSESSED, not CONFIRMED_STATIC | Match | true_negative_absence |
 | comment-abstention | jakarta-servlet-api | POSSIBLE, not CONFIRMED_STATIC | Match | abstention |
 
 **Documented correction / limitation:** Adjudicated `migrationReview.verdict` remains on all catalogue findings even when static `confidence` is `NOT_ASSESSED` or `POSSIBLE`. B4 assertions focus on confidence escalation rules and review-only verdict separation for pathmatch — not on suppressing catalogue entries.
@@ -44,8 +48,9 @@ Denominator: **4 corpus scenarios**, **11 labelled outcome assertions** in regre
 | True negative (no CONFIRMED_STATIC on absent patterns) | 2 | 4 | no-static-signals + partial absences |
 | Informational / review-only | 1 | 4 | pathmatch-review |
 | Abstention (POSSIBLE not CONFIRMED) | 1 | 4 | comment-only |
-| False CONFIRMED_STATIC in negative scenarios | 0 | 3 negative checks | regression enforced |
-| False ACTION_REQUIRED on pathmatch | 0 | 1 | REVIEW_RECOMMENDED held |
+| False CONFIRMED_STATIC (`mustNotBeConfidence`) | 0 | **5** outcome checks | 3 in no-static-signals + 1 pathmatch-review + 1 comment-abstention |
+| False ACTION_REQUIRED on pathmatch (`mustNotBeVerdict`) | 0 | **1** outcome check | pathmatch-review only |
+| Outcome rows with `taxonomy` label | 10 | **10** manifest rows | locked by regression test |
 
 **No general accuracy claim.** Corpus size is intentionally tiny and Spring Boot 2.7.18→3.2.12 only.
 
